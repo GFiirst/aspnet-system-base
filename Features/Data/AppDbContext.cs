@@ -7,7 +7,7 @@ public class AppDbContext : DbContext
         DbContextOptions<AppDbContext> options
     ): base(options) {}
 
-    // public DbSet<Tarefa> Tarefas { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     //gera e atualiza CreatedAt e UpdatedAt automaticamente
     public override async Task<int> SaveChangesAsync(

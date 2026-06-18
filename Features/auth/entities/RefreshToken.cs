@@ -11,4 +11,8 @@ public class RefreshToken : BaseEntity
     public string Device {get; set;} = "";
 
     public string Ip {get; set;} = "";
+
+    public Guid UserId { get; set; }
+
+    public User User { get; set; } = null!;
 }

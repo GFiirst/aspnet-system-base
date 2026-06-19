@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 public class UserService : IUserService
 {
     private readonly AppDbContext _context;
@@ -7,8 +9,23 @@ public class UserService : IUserService
         _context = context;
     }
 
-    public async Task<bool>CreateUserAsync(CreateUserDto dto)
+    public async Task CreateUserAsync(CreateUserDto dto)
     {
-        return true;
+        var userExist = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if(userExist != null)
+        {
+            throw new ConflictException("Email já existe.");
+        }
+
+        var user = new User
+        {   
+            Name = dto.Name,
+            Email = dto.Email,
+            Password = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12)
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
     }
 }

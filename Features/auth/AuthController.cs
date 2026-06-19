@@ -13,4 +13,11 @@ public class AuthController : ControllerBase
     {
         _userService = userService;
     }
+
+    [HttpPost("sign-up")]
+    public async Task<IActionResult> CreateUser(CreateUserDto dto)
+    {   
+        await _userService.CreateUserAsync(dto);
+        return Created();
+    }
 }

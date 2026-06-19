@@ -1,4 +1,4 @@
 public interface IUserService
 {
-    Task<bool> CreateUserAsync(CreateUserDto dto);
+    Task CreateUserAsync(CreateUserDto dto);
 }

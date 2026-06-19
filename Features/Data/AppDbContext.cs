@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
     ): base(options) {}
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<User> Users { get; set; }
 
     //gera e atualiza CreatedAt e UpdatedAt automaticamente
     public override async Task<int> SaveChangesAsync(

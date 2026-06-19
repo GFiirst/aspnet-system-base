@@ -31,7 +31,7 @@ builder.Services
 
 var app = builder.Build();
 
-// app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 

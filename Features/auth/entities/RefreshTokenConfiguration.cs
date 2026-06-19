@@ -6,7 +6,9 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
     public void Configure(
         EntityTypeBuilder<RefreshToken> builder
     )
-    {
+    {   
+        builder.ConfigureBase();
+
         builder.ToTable("refresh_token");
 
         builder.HasIndex(x => x.TokenHash)

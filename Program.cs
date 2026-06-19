@@ -14,18 +14,19 @@ builder.Services.AddDbContext<AppDbContext>(
 
 builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services
-    .AddControllers()
-    .ConfigureApiBehaviorOptions(options =>
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
     {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            return new BadRequestObjectResult(new
-            {
-                message = "Dados inválidos."
-            });
-        };
-    });
+        var firstError = context.ModelState
+            .Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .FirstOrDefault();
+
+        return new BadRequestObjectResult(firstError);
+    };
+});
 
 var app = builder.Build();
 

@@ -14,6 +14,7 @@ public class CreateUserDto
         255,
         ErrorMessage = "{0} deve conter no maximo {1} caracteres."
     )]
+    [EmailAddress(ErrorMessage = "Email invalido")]
     public string Email {get; set;} = "";
 
     [Required(ErrorMessage = "A senha é obrigatoria")]

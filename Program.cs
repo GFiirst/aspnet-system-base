@@ -12,9 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(
         )
 );
 
-// builder.Services.AddScoped<
-
-// >();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services
     .AddControllers()

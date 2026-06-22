@@ -17,3 +17,9 @@ dotnet ef migrations add InitialCreatedotnet tool restore
 **Rodar migration**
 
 dotnet ef database update
+
+**Instalar JWT**
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+
+**Colocar senha no secrets**
+dotnet user-secrets set "JWT:SECRET" "SENHA_SUPER_FORTE"

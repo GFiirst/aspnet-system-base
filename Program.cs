@@ -13,6 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(
 );
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

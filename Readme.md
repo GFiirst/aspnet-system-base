@@ -21,5 +21,6 @@ dotnet ef database update
 **Instalar JWT**
 dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
 
-**Colocar senha no secrets**
-dotnet user-secrets set "JWT:SECRET" "SENHA_SUPER_FORTE"
+**Colocar senha no secrets** A SENHA TEM Q SER LONGA SE NAO DA ERRO - O HS256 EGIXE 32 BITS DE SENHA
+dotnet user-secrets set "Jwt:AccessKey" "SENHA_SUPER_FORTE_LONGA_PARA_UM_CARALHO"
+dotnet user-secrets set "Jwt:RefreshKey" "SENHA_SUPER_MEGA_FORTE_LONGA_PARA_UM_CARALHO"

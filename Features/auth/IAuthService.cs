@@ -1,4 +1,4 @@
 public interface IAuthService
 {
-    Task LoginAsync(LoginDto dto);
+    Task<ResponseLoginDto> LoginAsync(LoginDto dto,  HttpContext httpContext);
 }

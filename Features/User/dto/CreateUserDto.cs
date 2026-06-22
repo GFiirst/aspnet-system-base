@@ -18,9 +18,9 @@ public class CreateUserDto
     public string Email {get; set;} = "";
 
     [Required(ErrorMessage = "A senha é obrigatoria")]
-    [MaxLength(
-        255,
-        ErrorMessage = "{0} deve conter no maximo {1} caracteres."
+    [StringLength(
+        100, MinimumLength = 5,
+        ErrorMessage = "{0} deve conter entre {1} e {2} caracteres."
     )]
     public string Password {get; set;} = "";
 }

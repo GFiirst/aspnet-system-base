@@ -22,7 +22,7 @@ public class TokenService : ITokenService
         };
 
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_jwt.Key)
+            Encoding.UTF8.GetBytes(_jwt.AccessKey)
         );
 
         var creds = new SigningCredentials(
@@ -34,7 +34,7 @@ public class TokenService : ITokenService
             issuer: _jwt.Issuer,
             audience: _jwt.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwt.ExpiresMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_jwt.AccessExpirationMinutes),
             signingCredentials: creds
         );
 

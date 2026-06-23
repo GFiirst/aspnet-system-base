@@ -43,15 +43,18 @@ public class AuthService : IAuthService
 
         int maxSession = 5;
 
-        var activeSessions = await _context.RefreshTokens
-        .Where(t => t.UserId == userExist.Id &&
-                    t.Status == TokenStatusEnum.active)
-        .OrderBy(t => t.CreatedAt)
-        .ToListAsync();
+        var sessionCount = await _context.RefreshTokens
+            .CountAsync(t => t.UserId == userExist.Id &&
+                            t.Status == TokenStatusEnum.active);
 
-        if(activeSessions.Count >= maxSession)
+        if (sessionCount >= maxSession)
         {
-            var oldestSession = activeSessions[0];
+            var oldestSession = await _context.RefreshTokens
+                .Where(t => t.UserId == userExist.Id &&
+                            t.Status == TokenStatusEnum.active)
+                .OrderBy(t => t.CreatedAt)
+                .FirstAsync();
+
             oldestSession.Status = TokenStatusEnum.revoked;
         }
 
@@ -67,11 +70,7 @@ public class AuthService : IAuthService
             Ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             Device = DeviceHelper.ExtractDevice(userAgent),
             ExpiredAt = DateTime.UtcNow.AddDays(30),
-            TokenHash = "pending"
         };
-
-        _context.RefreshTokens.Add(refreshEntity);
-        await _context.SaveChangesAsync();
 
         var refreshToken = new JwtSecurityTokenHandler().WriteToken(
         new JwtSecurityToken(
@@ -92,7 +91,6 @@ public class AuthService : IAuthService
 
         refreshEntity.TokenHash = BCrypt.Net.BCrypt.HashPassword(refreshToken);
 
-        _context.RefreshTokens.Update(refreshEntity);
         await _context.SaveChangesAsync();
 
         return new ResponseLoginDto

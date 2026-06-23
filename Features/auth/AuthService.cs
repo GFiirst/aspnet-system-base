@@ -11,15 +11,18 @@ public class AuthService : IAuthService
     private readonly AppDbContext _context;
     private readonly ITokenService _tokenService;
     private readonly JwtSettings _jwt;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AuthService(
         AppDbContext context,
         ITokenService tokenService,
-        IOptions<JwtSettings> jwt)
+        IOptions<JwtSettings> jwt,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _tokenService = tokenService;
         _jwt = jwt.Value;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<ResponseLoginDto> LoginAsync(LoginDto dto, HttpContext httpContext)
@@ -29,13 +32,17 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         if (userExist == null)
+        {
             throw new UnauthorizedException("Email ou senha invalida");
+        }
 
 
         bool validPass = BCrypt.Net.BCrypt.Verify(dto.Password, userExist.Password);
 
         if (!validPass)
+        {
             throw new UnauthorizedException("Email ou senha invalida");
+        }
 
         const int maxSession = 5;
 
@@ -70,6 +77,8 @@ public class AuthService : IAuthService
 
         var refreshToken = new JwtSecurityTokenHandler().WriteToken(
             new JwtSecurityToken(
+                issuer: _jwt.Issuer,
+                audience: _jwt.Audience,
                 claims:
                 [
                     new Claim(JwtRegisteredClaimNames.Sub, userExist.Id.ToString()),

@@ -6,19 +6,16 @@ using YourProject.Utils;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 
-
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly ITokenService _tokenService;
-
     private readonly JwtSettings _jwt;
 
     public AuthService(
         AppDbContext context,
         ITokenService tokenService,
-        IOptions<JwtSettings> jwt
-        )
+        IOptions<JwtSettings> jwt)
     {
         _context = context;
         _tokenService = tokenService;
@@ -27,21 +24,20 @@ public class AuthService : IAuthService
 
     public async Task<ResponseLoginDto> LoginAsync(LoginDto dto, HttpContext httpContext)
     {
-        var userExist = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var userExist = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        if(userExist == null)
-        {
+        if (userExist == null)
             throw new UnauthorizedException("Email ou senha invalida");
-        }
+
 
         bool validPass = BCrypt.Net.BCrypt.Verify(dto.Password, userExist.Password);
 
-        if(validPass == false)
-        {
+        if (!validPass)
             throw new UnauthorizedException("Email ou senha invalida");
-        }
 
-        int maxSession = 5;
+        const int maxSession = 5;
 
         var sessionCount = await _context.RefreshTokens
             .CountAsync(t => t.UserId == userExist.Id &&
@@ -58,7 +54,7 @@ public class AuthService : IAuthService
             oldestSession.Status = TokenStatusEnum.revoked;
         }
 
-        var accesToken = _tokenService.CreateToken(userExist);
+        var accessToken = _tokenService.CreateToken(userExist);
 
         var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
 
@@ -73,29 +69,35 @@ public class AuthService : IAuthService
         };
 
         var refreshToken = new JwtSecurityTokenHandler().WriteToken(
-        new JwtSecurityToken(
-            claims:
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, userExist.Id.ToString()),
-                new Claim("tokenId", refreshEntity.Id.ToString())
-            ],
-            expires: DateTime.UtcNow.AddDays(30),
-            signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(_jwt.RefreshKey)
-                ),
-                SecurityAlgorithms.HmacSha256
+            new JwtSecurityToken(
+                claims:
+                [
+                    new Claim(JwtRegisteredClaimNames.Sub, userExist.Id.ToString()),
+                    new Claim("tokenId", refreshEntity.Id.ToString())
+                ],
+                expires: DateTime.UtcNow.AddDays(30),
+                signingCredentials: new SigningCredentials(
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(_jwt.RefreshKey)
+                    ),
+                    SecurityAlgorithms.HmacSha256
                 )
             )
         );
 
-        refreshEntity.TokenHash = BCrypt.Net.BCrypt.HashPassword(refreshToken);
+        refreshEntity.TokenHash =
+            Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(
+                    Encoding.UTF8.GetBytes(refreshToken)
+                )
+            );
 
+        _context.RefreshTokens.Add(refreshEntity);
         await _context.SaveChangesAsync();
 
         return new ResponseLoginDto
         {
-            AccessToken = accesToken,
+            AccessToken = accessToken,
             RefreshToken = refreshToken,
         };
     }

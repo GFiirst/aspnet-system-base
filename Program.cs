@@ -1,42 +1,16 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using SeuProjeto.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<AppDbContext>(
-    options =>
-        options.UseNpgsql(
-            builder.Configuration.GetConnectionString("DefaultConnection")
-        )
-);
+builder.Services.AddDatabase(builder.Configuration);
 
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddApplicationServices();
 
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        var firstError = context.ModelState
-            .Values
-            .SelectMany(v => v.Errors)
-            .Select(e => e.ErrorMessage)
-            .FirstOrDefault();
+builder.Services.AddApiValidation();
 
-        return new BadRequestObjectResult(firstError);
-    };
-});
-
-
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("Jwt")
-);
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 

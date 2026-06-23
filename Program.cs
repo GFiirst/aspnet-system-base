@@ -12,6 +12,8 @@ builder.Services.AddApiValidation();
 
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();

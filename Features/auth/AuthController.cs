@@ -52,4 +52,11 @@ public class AuthController : ControllerBase
             });
         return NoContent();
     }
+
+    [HttpPost("refresh")]
+    [RefreshTokenAuthorize]
+    public async Task<IActionResult> RefreshToken()
+    {
+        return Ok("Passou no teste");
+    }
 }

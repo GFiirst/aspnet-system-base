@@ -41,6 +41,20 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("Email ou senha invalida");
         }
 
+        int maxSession = 5;
+
+        var activeSessions = await _context.RefreshTokens
+        .Where(t => t.UserId == userExist.Id &&
+                    t.Status == TokenStatusEnum.active)
+        .OrderBy(t => t.CreatedAt)
+        .ToListAsync();
+
+        if(activeSessions.Count >= maxSession)
+        {
+            var oldestSession = activeSessions[0];
+            oldestSession.Status = TokenStatusEnum.revoked;
+        }
+
         var accesToken = _tokenService.CreateToken(userExist);
 
         var userAgent = httpContext.Request.Headers["User-Agent"].ToString();

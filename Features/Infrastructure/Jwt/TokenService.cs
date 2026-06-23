@@ -40,4 +40,25 @@ public class TokenService : ITokenService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public ClaimsPrincipal ValidateRefreshToken(string token)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        var key = Encoding.UTF8.GetBytes(_jwt.RefreshKey);
+
+        var parameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _jwt.Issuer,
+            ValidAudience = _jwt.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateLifetime = false
+        };
+
+        var principal = tokenHandler.ValidateToken(token, parameters, out _);
+        return principal;
+    }
 }

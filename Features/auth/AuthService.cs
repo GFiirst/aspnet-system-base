@@ -26,7 +26,44 @@ public class AuthService : IAuthService
     }
 
     public async Task<ResponseLoginDto> LoginAsync(LoginDto dto, HttpContext httpContext)
-    {
+    {   
+
+        var httpContextExist = _httpContextAccessor.HttpContext;
+
+        if (httpContextExist != null)
+        {
+            var existingRefreshToken = httpContext.Request.Cookies["refresh_token"];
+
+            if (!string.IsNullOrEmpty(existingRefreshToken))
+            {
+                try
+                {
+                    var principal = _tokenService.ValidateRefreshToken(existingRefreshToken);
+
+
+                    var tokenIdClaim = principal.Claims
+                        .FirstOrDefault(c => c.Type == "tokenId")?.Value;
+
+
+                    if (Guid.TryParse(tokenIdClaim, out var tokenId))
+                    {
+                        var storedToken = await _context.RefreshTokens
+                            .FirstOrDefaultAsync(x => x.Id == tokenId);
+
+                        if (storedToken != null)
+                        {
+                            storedToken.Status = TokenStatusEnum.revoked;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch
+                {}
+
+                httpContext.Response.Cookies.Delete("refresh_token");
+                httpContext.Response.Cookies.Delete("access_token");
+            }
+        }
         var userExist = await _context.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
@@ -59,6 +96,7 @@ public class AuthService : IAuthService
                 .FirstAsync();
 
             oldestSession.Status = TokenStatusEnum.revoked;
+            await _context.SaveChangesAsync();
         }
 
         var accessToken = _tokenService.CreateToken(userExist);

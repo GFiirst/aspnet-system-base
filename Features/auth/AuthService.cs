@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using YourProject.Utils;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 public class AuthService : IAuthService
 {
@@ -52,18 +53,39 @@ public class AuthService : IAuthService
 
                         if (storedToken != null)
                         {
-                            storedToken.Status = TokenStatusEnum.revoked;
-                            await _context.SaveChangesAsync();
+                            var incomingHash = Convert.ToHexString(
+                                SHA256.HashData(Encoding.UTF8.GetBytes(existingRefreshToken))
+                            );
+
+                            var storedHash = storedToken.TokenHash;
+
+                            var storedHashBytes = Convert.FromHexString(storedHash);
+                            var incomingHashBytes = Convert.FromHexString(incomingHash);
+
+                            var isValid = CryptographicOperations.FixedTimeEquals(
+                                storedHashBytes,
+                                incomingHashBytes
+                            );
+
+                            if (isValid)
+                            {
+                                storedToken.Status = TokenStatusEnum.revoked;
+                                await _context.SaveChangesAsync();
+                            }
                         }
                     }
                 }
                 catch
-                {}
+                {
+                    
+                }
 
                 httpContext.Response.Cookies.Delete("refresh_token");
                 httpContext.Response.Cookies.Delete("access_token");
             }
         }
+
+        
         var userExist = await _context.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == dto.Email);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using System.Text;
 
 public class RefreshTokenAuthorizeAttribute : Attribute, IAsyncActionFilter
@@ -60,6 +61,14 @@ public class RefreshTokenAuthorizeAttribute : Attribute, IAsyncActionFilter
             var storedToken = await dbContext.RefreshTokens.FindAsync(tokenId);
 
             if (storedToken is null || storedToken.Status != TokenStatusEnum.active)
+            {
+                throw new UnauthorizedException("Refresh token invalido");
+            }
+
+            var incomingHash = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
+            var storedHash = Convert.FromHexString(storedToken.TokenHash);
+
+            if (!CryptographicOperations.FixedTimeEquals(storedHash, incomingHash))
             {
                 throw new UnauthorizedException("Refresh token invalido");
             }

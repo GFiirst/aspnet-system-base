@@ -1,7 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
-namespace SeuProjeto.Extensions;
+using Microsoft.IdentityModel.Tokens;
 
 public static class ServiceCollectionExtensions
 {
@@ -52,7 +54,37 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<JwtSettings>(
             configuration.GetSection("Jwt"));
-            
+
+        var jwt = configuration
+            .GetSection("Jwt")
+            .Get<JwtSettings>()!;
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+
+                    ValidIssuer = jwt.Issuer,
+                    ValidAudience = jwt.Audience,
+
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwt.AccessKey)
+                    )
+                };
+            });
+
+        services.AddAuthorizationBuilder()
+            .SetFallbackPolicy(
+                new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build()
+            );
+
         return services;
     }
 }

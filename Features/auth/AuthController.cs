@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -18,6 +19,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("sign-up")]
+    [AllowAnonymous]
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
         await _userService.CreateUserAsync(dto);
@@ -25,6 +27,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var result = await _authService.LoginAsync(dto, HttpContext);
@@ -54,6 +57,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [AllowAnonymous]
     [RefreshTokenAuthorize]
     public async Task<IActionResult> RefreshToken()
     {

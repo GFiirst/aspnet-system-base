@@ -60,23 +60,33 @@ public static class ServiceCollectionExtensions
             .Get<JwtSettings>()!;
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateIssuerSigningKey = true,
+                ValidateLifetime = true,
+
+                ValidIssuer = jwt.Issuer,
+                ValidAudience = jwt.Audience,
+
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwt.AccessKey)
+                )
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidateLifetime = true,
+                    context.Token = context.Request.Cookies["access_token"];
 
-                    ValidIssuer = jwt.Issuer,
-                    ValidAudience = jwt.Audience,
-
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwt.AccessKey)
-                    )
-                };
-            });
+                    return Task.CompletedTask;
+                }
+            };
+        });
 
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(

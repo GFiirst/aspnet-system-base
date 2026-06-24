@@ -173,7 +173,7 @@ public class AuthService : IAuthService
 
     public async Task<string> RefreshAsync(HttpContext httpContext){
 
-        var refreshToken = httpContext.Request.Cookies["refresh_Token"];
+        var refreshToken = httpContext.Request.Cookies["refresh_token"];
 
         var handler = new JwtSecurityTokenHandler();
 

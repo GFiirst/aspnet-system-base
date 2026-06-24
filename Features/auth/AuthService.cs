@@ -170,4 +170,30 @@ public class AuthService : IAuthService
             RefreshToken = refreshToken,
         };
     }
+
+    public async Task<string> RefreshAsync(HttpContext httpContext){
+
+        var refreshToken = httpContext.Request.Cookies["refresh_Token"];
+
+        var handler = new JwtSecurityTokenHandler();
+
+        var token = handler.ReadJwtToken(refreshToken);
+
+        var userIdString = token.Claims
+            .FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)
+            ?.Value;
+
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            throw new UnauthorizedException("Refresh token inválido.");
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user is null)
+        {
+            throw new UnauthorizedException("Usuário não encontrado.");
+        }
+        return _tokenService.CreateToken(user);
+    }
 }

@@ -61,6 +61,26 @@ public class AuthController : ControllerBase
     [RefreshTokenAuthorize]
     public async Task<IActionResult> RefreshToken()
     {
-        return Ok("Passou no teste");
+        var accessToken = await _authService.RefreshAsync(HttpContext);
+
+        Response.Cookies.Append(
+            "access_token",
+            accessToken,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+            });
+
+        return NoContent();
     }
+
+    [HttpGet("teste")]
+    public async Task<IActionResult> testeToken()
+    {
+       return Ok("passou");
+    }
+
 }

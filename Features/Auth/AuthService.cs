@@ -87,7 +87,8 @@ public class AuthService : IAuthService
 
         
         var userExist = await _context.Users
-            .AsNoTracking()
+            .Include(x => x.UserRoles)
+            .ThenInclude(x => x.Role)
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
         if (userExist == null)
@@ -188,7 +189,10 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("Refresh token inválido.");
         }
 
-        var user = await _context.Users.FindAsync(userId);
+        var user = await _context.Users
+        .Include(x => x.UserRoles)
+        .ThenInclude(x => x.Role)
+        .FirstOrDefaultAsync(x => x.Id == userId);
 
         if (user is null)
         {

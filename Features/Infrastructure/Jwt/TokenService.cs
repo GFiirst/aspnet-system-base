@@ -18,8 +18,18 @@ public class TokenService : ITokenService
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email)
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        claims.AddRange(
+            user.UserRoles.Select(x =>
+                new Claim(
+                    ClaimTypes.Role,
+                    x.Role.Roles.ToString()
+                )
+            )
+        );
 
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_jwt.AccessKey)

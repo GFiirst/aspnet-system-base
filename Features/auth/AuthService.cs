@@ -95,7 +95,8 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("Email ou senha invalida");
         }
 
-        bool validPass = PasswordHasher.VerifyPassword(dto.Password, userExist.Password);
+
+        bool validPass = BCrypt.Net.BCrypt.Verify(dto.Password, userExist.Password);
 
         if (!validPass)
         {

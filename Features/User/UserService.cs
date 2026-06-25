@@ -22,7 +22,7 @@ public class UserService : IUserService
         {   
             Name = dto.Name,
             Email = dto.Email,
-            Password = PasswordHasher.HashPassword(dto.Password)
+            Password = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12)
         };
 
         _context.Users.Add(user);

@@ -6,5 +6,7 @@ public class User : BaseEntity
 
     public string Password {get; set;} = "";
 
+    public ICollection<UserRole> UserRoles { get; set; } = [];
+
     public List<RefreshToken> RefreshTokens { get; set; } = [];
 }

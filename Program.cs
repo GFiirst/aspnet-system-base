@@ -14,6 +14,8 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+await app.SeedDatabaseAsync();
+
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 
 app.UseHttpsRedirection();

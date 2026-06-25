@@ -77,6 +77,14 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("Logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout()
+    {   
+        await _authService.LogoutAsync(HttpContext);
+        return NoContent();
+    }
+
     [HttpGet("teste")]
     public async Task<IActionResult> testeToken()
     {

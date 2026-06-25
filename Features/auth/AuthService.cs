@@ -196,4 +196,55 @@ public class AuthService : IAuthService
         }
         return _tokenService.CreateToken(user);
     }
+
+    public async Task LogoutAsync(HttpContext httpContext)
+    {
+        var existingRefreshToken = httpContext.Request.Cookies?["refresh_token"];
+
+        if (!string.IsNullOrEmpty(existingRefreshToken))
+        {
+            try
+            {
+                var principal = _tokenService.ValidateRefreshToken(existingRefreshToken);
+
+
+                var tokenIdClaim = principal.Claims
+                    .FirstOrDefault(c => c.Type == "tokenId")?.Value;
+
+
+                if (Guid.TryParse(tokenIdClaim, out var tokenId))
+                {
+                    var storedToken = await _context.RefreshTokens
+                        .FirstOrDefaultAsync(x => x.Id == tokenId);
+
+                    if (storedToken != null)
+                    {
+                        var incomingHash = Convert.ToHexString(
+                            SHA256.HashData(Encoding.UTF8.GetBytes(existingRefreshToken))
+                        );
+
+                        var storedHash = storedToken.TokenHash;
+
+                        var storedHashBytes = Convert.FromHexString(storedHash);
+                        var incomingHashBytes = Convert.FromHexString(incomingHash);
+
+                        var isValid = CryptographicOperations.FixedTimeEquals(
+                            storedHashBytes,
+                            incomingHashBytes
+                        );
+
+                        if (isValid)
+                        {
+                            storedToken.Status = TokenStatusEnum.revoked;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+            }
+            catch{}
+        }
+
+        httpContext.Response.Cookies.Delete("refresh_token");
+        httpContext.Response.Cookies.Delete("access_token");
+    }
 }

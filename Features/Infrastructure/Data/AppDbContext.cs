@@ -12,6 +12,10 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
 
+    public DbSet<Permissions> Permissions { get; set; }
+
+    public DbSet<RolesPermissions> RolesPermissions { get; set; }
+
     //gera e atualiza CreatedAt e UpdatedAt automaticamente
     public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default
@@ -61,6 +65,19 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserRole>()
             .HasOne(x => x.Role)
             .WithMany(x => x.UserRoles)
+            .HasForeignKey(x => x.RoleId);
+
+        modelBuilder.Entity<RolesPermissions>()
+            .HasKey(x => new { x.PermissionId, x.RoleId });
+
+        modelBuilder.Entity<RolesPermissions>()
+            .HasOne(x => x.Permission)
+            .WithMany(x => x.RolesPermissions)
+            .HasForeignKey(x => x.PermissionId);
+
+        modelBuilder.Entity<RolesPermissions>()
+            .HasOne(x => x.Role)
+            .WithMany(x => x.RolesPermissions)
             .HasForeignKey(x => x.RoleId);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

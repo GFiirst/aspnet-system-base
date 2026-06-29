@@ -86,7 +86,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("teste")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Policy = Policies.UserCreate)]
     public async Task<IActionResult> testeToken()
     {
        return Ok("passou");

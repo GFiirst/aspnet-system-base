@@ -2,9 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 public static class RoleSeeder
 {
-    public static async Task SeedAsync(
-        AppDbContext context
-    )
+    public static async Task SeedAsync(AppDbContext context)
     {
         foreach (RolesEnum roleEnum in Enum.GetValues<RolesEnum>())
         {

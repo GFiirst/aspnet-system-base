@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -11,6 +13,9 @@ builder.Services.AddApiValidation();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddAuthorization(Policies.ConfigurePolicies);
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 var app = builder.Build();
 

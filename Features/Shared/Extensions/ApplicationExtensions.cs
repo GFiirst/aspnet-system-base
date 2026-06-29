@@ -11,5 +11,7 @@ public static class ApplicationExtensions
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         await RoleSeeder.SeedAsync(context);
+        await PermissionSeeder.SeedAsync(context);
+        await RolePermissionSeeder.SeedAsync(context);
     }
 }

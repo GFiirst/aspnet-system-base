@@ -4,20 +4,33 @@ public static class RoleSeeder
 {
     public static async Task SeedAsync(AppDbContext context)
     {
-        foreach (RolesEnum roleEnum in Enum.GetValues<RolesEnum>())
+        var enumRoles = Enum.GetValues<RolesEnum>().ToHashSet();
+        
+        var existingRoles = await context.Roles
+            .Select(r => r.Roles)
+            .ToListAsync();
+        
+        var newRoles = enumRoles.Except(existingRoles).ToList();
+        foreach (var roleEnum in newRoles)
         {
-            var exists = await context.Roles
-                .AnyAsync(x => x.Roles == roleEnum);
-
-            if (!exists)
+            context.Roles.Add(new Role
             {
-                context.Roles.Add(new Role
-                {
-                    Roles = roleEnum
-                });
+                Roles = roleEnum
+            });
+        }
+        
+        var rolesToRemove = existingRoles.Except(enumRoles).ToList();
+        foreach (var roleEnum in rolesToRemove)
+        {
+            var role = await context.Roles
+                .FirstOrDefaultAsync(r => r.Roles == roleEnum);
+            
+            if (role != null)
+            {
+                context.Roles.Remove(role);
             }
         }
-
+        
         await context.SaveChangesAsync();
     }
 }

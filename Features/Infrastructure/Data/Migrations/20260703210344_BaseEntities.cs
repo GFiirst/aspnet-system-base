@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace aspnet_autenticacao.Migrations
 {
     /// <inheritdoc />
-    public partial class BaseEntity : Migration
+    public partial class BaseEntities : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,7 +17,7 @@ namespace aspnet_autenticacao.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     user_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    user_name = table.Column<string>(type: "text", nullable: true),
+                    user_email = table.Column<string>(type: "text", nullable: true),
                     entity_name = table.Column<string>(type: "text", nullable: false),
                     entity_id = table.Column<string>(type: "text", nullable: false),
                     action = table.Column<string>(type: "text", nullable: false),

@@ -13,8 +13,8 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(x => x.UserId)
         .HasColumnName("user_id");
         
-        builder.Property(x => x.UserName)
-        .HasColumnName("user_name");
+        builder.Property(x => x.UserEmail)
+        .HasColumnName("user_email");
         
         builder.Property(x => x.EntityName)
         .HasColumnName("entity_name");

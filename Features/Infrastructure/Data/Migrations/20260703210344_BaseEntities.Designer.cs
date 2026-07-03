@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace aspnet_autenticacao.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260703152205_BaseEntity")]
-    partial class BaseEntity
+    [Migration("20260703210344_BaseEntities")]
+    partial class BaseEntities
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -62,13 +62,13 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp");
 
+                    b.Property<string>("UserEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("user_email");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
-
-                    b.Property<string>("UserName")
-                        .HasColumnType("text")
-                        .HasColumnName("user_name");
 
                     b.HasKey("Id");
 

@@ -59,13 +59,13 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp");
 
+                    b.Property<string>("UserEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("user_email");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
-
-                    b.Property<string>("UserName")
-                        .HasColumnType("text")
-                        .HasColumnName("user_name");
 
                     b.HasKey("Id");
 

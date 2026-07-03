@@ -37,6 +37,11 @@ public class AuditInterceptor : SaveChangesInterceptor
         var userName = httpContext?.User?.Identity?.Name;
         var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString();
 
+        if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(userName))
+        {
+            userName = "Anonymous";
+        }
+
         var entries = context.ChangeTracker.Entries()
             .Where(e => e.State == EntityState.Added 
                      || e.State == EntityState.Modified 

@@ -23,7 +23,8 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         .HasColumnName("entity_id");
         
         builder.Property(x => x.Action)
-        .HasColumnName("action");
+        .HasColumnName("action")
+        .HasConversion<string>();
         
         builder.Property(x => x.OldValues)
         .HasColumnName("old_values");

@@ -16,6 +16,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAuthorization(Policies.ConfigurePolicies);
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<AuditInterceptor>();
 
 var app = builder.Build();
 

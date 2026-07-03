@@ -11,9 +11,11 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(
-                configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+        {
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+            options.AddInterceptors(serviceProvider.GetRequiredService<AuditInterceptor>());
+        });
 
         return services;
     }

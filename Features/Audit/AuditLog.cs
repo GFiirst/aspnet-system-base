@@ -6,9 +6,9 @@ public class AuditLog
 
     public string? UserName { get; set; }
 
-    public string EntityName { get; set; }
-
-    public string EntityId { get; set; }
+    public required string EntityName { get; set; }
+    
+    public required string EntityId { get; set; }
     
     public AuditAction Action { get; set; }
     

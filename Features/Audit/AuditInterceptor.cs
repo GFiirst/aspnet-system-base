@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Text.Json;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 public class AuditInterceptor : SaveChangesInterceptor
 {
@@ -33,7 +35,10 @@ public class AuditInterceptor : SaveChangesInterceptor
         if (context == null) return;
 
         var httpContext = _httpContextAccessor.HttpContext;
-        var userId = httpContext?.User?.FindFirst("sub")?.Value;
+        
+        var userId = httpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                   ?? httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
         var userName = httpContext?.User?.Identity?.Name;
         var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString();
 

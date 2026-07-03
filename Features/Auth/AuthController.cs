@@ -89,7 +89,14 @@ public class AuthController : ControllerBase
     [Authorize(Policy = Policies.UserCreate)]
     public async Task<IActionResult> testeToken()
     {
-       return Ok("passou");
+        var dto = new CreateUserDto
+        {
+            Name = "Teste",
+            Email = "teste@teste.com",
+            Password = "teste123"
+        };
+        await _userService.CreateUserAsync(dto);
+        return Created();
     }
 
 }

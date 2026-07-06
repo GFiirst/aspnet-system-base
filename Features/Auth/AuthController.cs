@@ -23,7 +23,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
         await _userService.CreateUserAsync(dto);
-        return Created();
+        return Ok();
     }
 
     [HttpPost("login")]
@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("refresh")]
@@ -74,15 +74,15 @@ public class AuthController : ControllerBase
                 Expires = DateTimeOffset.UtcNow.AddMinutes(15)
             });
 
-        return NoContent();
+        return Ok();
     }
 
-    [HttpPost("Logout")]
+    [HttpPost("logout")]
     [AllowAnonymous]
     public async Task<IActionResult> Logout()
     {   
         await _authService.LogoutAsync(HttpContext);
-        return NoContent();
+        return Ok();
     }
 
     [HttpGet("teste")]

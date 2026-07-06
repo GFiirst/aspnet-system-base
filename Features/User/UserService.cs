@@ -9,7 +9,7 @@ public class UserService : IUserService
         _context = context;
     }
 
-    public async Task CreateUserAsync(CreateUserDto dto)
+    public async Task<UserResponseDto> CreateUserAsync(CreateUserDto dto)
     {
         var userExist = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
@@ -43,5 +43,14 @@ public class UserService : IUserService
         });
 
         await _context.SaveChangesAsync();
+
+        return new UserResponseDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            CreatedAt = user.CreatedAt,
+            Roles = [role.Roles.ToString()]
+        };
     }
 }

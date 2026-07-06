@@ -165,10 +165,21 @@ public class AuthService : IAuthService
         _context.RefreshTokens.Add(refreshEntity);
         await _context.SaveChangesAsync();
 
+        var userInfo = new UserResponseDto
+        {
+            Id = userExist.Id,
+            Name = userExist.Name,
+            Email = userExist.Email,
+            CreatedAt = userExist.CreatedAt,
+            Roles = userExist.UserRoles.Select(ur => ur.Role.Roles.ToString()).ToList()
+        };
+
         return new ResponseLoginDto
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            UserInfo = userInfo
         };
     }
 

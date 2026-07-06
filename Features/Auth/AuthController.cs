@@ -22,8 +22,8 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
-        await _userService.CreateUserAsync(dto);
-        return Ok();
+        var result = await _userService.CreateUserAsync(dto);
+        return Ok(result);
     }
 
     [HttpPost("login")]
@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
-        return Ok();
+        return Ok(result);
     }
 
     [HttpPost("refresh")]
@@ -74,7 +74,12 @@ public class AuthController : ControllerBase
                 Expires = DateTimeOffset.UtcNow.AddMinutes(15)
             });
 
-        return Ok();
+        var result = new RefreshResponseDto
+        {
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+        };
+
+        return Ok(result);
     }
 
     [HttpPost("logout")]
@@ -85,18 +90,11 @@ public class AuthController : ControllerBase
         return Ok();
     }
 
+
     [HttpGet("teste")]
     [Authorize(Policy = Policies.UserCreate)]
     public async Task<IActionResult> testeToken()
     {
-        var dto = new CreateUserDto
-        {
-            Name = "Teste",
-            Email = "teste@teste.com",
-            Password = "teste123"
-        };
-        await _userService.CreateUserAsync(dto);
-        return Created();
+        return Ok("passou");
     }
-
 }

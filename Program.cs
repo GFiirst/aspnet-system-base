@@ -18,11 +18,20 @@ builder.Services.AddAuthorization(Policies.ConfigurePolicies);
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddScoped<AuditInterceptor>();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
 await app.SeedDatabaseAsync();
 
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 

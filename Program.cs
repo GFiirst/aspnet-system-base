@@ -35,7 +35,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .MinimumLevel.Information()
-    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day, outputTemplate: outputTemplate)
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 15, outputTemplate: outputTemplate)
     .WriteTo.Console(outputTemplate: outputTemplate)
     .Enrich.FromLogContext()
     .CreateLogger();
@@ -70,6 +70,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 

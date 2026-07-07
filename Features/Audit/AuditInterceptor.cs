@@ -8,9 +8,9 @@ public class AuditInterceptor : SaveChangesInterceptor
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    private readonly ILogger<AuthService> _logger;
+    private readonly ILogger<AuditInterceptor> _logger;
 
-    public AuditInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuthService> logger)
+    public AuditInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuditInterceptor> logger)
     {
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
@@ -36,30 +36,41 @@ public class AuditInterceptor : SaveChangesInterceptor
     private void AuditChanges(DbContext? context)
     {
         if (context == null) return;
-
+    
         var httpContext = _httpContextAccessor.HttpContext;
-        
-        var userId = httpContext?.User?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-                   ?? httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        var userEmail = httpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
-        var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString();
 
-        _logger.LogInformation(
-        "Audit UserId={UserId} UserEmail={UserEmail}",
-        userId,
-        userEmail);
+        string? userId = null;
+        string? userEmail = null;
+        string? ipAddress = null;
 
-        if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(userEmail))
+        if (httpContext != null)
+        {
+            userId = httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            userEmail = httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+            ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+        }
+        else
+        {
+            userEmail = "System";
+        }
+
+        if (httpContext != null &&
+            string.IsNullOrWhiteSpace(userId) &&
+            string.IsNullOrWhiteSpace(userEmail))
         {
             userEmail = "Anonymous";
         }
 
         var entries = context.ChangeTracker.Entries()
-            .Where(e => e.State == EntityState.Added 
-                     || e.State == EntityState.Modified 
-                     || e.State == EntityState.Deleted)
-            .ToList();
+        .Where(e =>
+            e.Entity is not AuditLog &&
+            (e.State == EntityState.Added ||
+            e.State == EntityState.Modified ||
+            e.State == EntityState.Deleted))
+        .ToList();
+
 
         foreach (var entry in entries)
         {

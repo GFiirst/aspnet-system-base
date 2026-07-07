@@ -59,31 +59,6 @@ public class AppDbContext : DbContext
             typeof(AppDbContext).Assembly
         );
 
-        modelBuilder.Entity<UserRole>()
-            .HasKey(x => new { x.UserId, x.RoleId });
-
-        modelBuilder.Entity<UserRole>()
-            .HasOne(x => x.User)
-            .WithMany(x => x.UserRoles)
-            .HasForeignKey(x => x.UserId);
-
-        modelBuilder.Entity<UserRole>()
-            .HasOne(x => x.Role)
-            .WithMany(x => x.UserRoles)
-            .HasForeignKey(x => x.RoleId);
-
-        modelBuilder.Entity<RolesPermissions>()
-            .HasKey(x => new { x.PermissionId, x.RoleId });
-
-        modelBuilder.Entity<RolesPermissions>()
-            .HasOne(x => x.Permission)
-            .WithMany(x => x.RolesPermissions)
-            .HasForeignKey(x => x.PermissionId);
-
-        modelBuilder.Entity<RolesPermissions>()
-            .HasOne(x => x.Role)
-            .WithMany(x => x.RolesPermissions)
-            .HasForeignKey(x => x.RoleId);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {

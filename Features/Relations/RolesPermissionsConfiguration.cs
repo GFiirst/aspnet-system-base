@@ -9,7 +9,7 @@ public class RolesPermissionsConfiguration : IEntityTypeConfiguration<RolesPermi
     {
         builder.ToTable("role_permission");
 
-         builder.HasKey(x => new { x.PermissionId, x.RoleId });
+        builder.HasKey(x => new { x.PermissionId, x.RoleId });
 
         builder.Property(x => x.PermissionId)
             .HasColumnName("permission_id");

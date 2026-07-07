@@ -8,9 +8,12 @@ public class AuditInterceptor : SaveChangesInterceptor
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuditInterceptor(IHttpContextAccessor httpContextAccessor)
+    private readonly ILogger<AuthService> _logger;
+
+    public AuditInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuthService> logger)
     {
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public override InterceptionResult<int> SavingChanges(
@@ -42,7 +45,10 @@ public class AuditInterceptor : SaveChangesInterceptor
         var userEmail = httpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
         var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString();
 
-        Console.WriteLine($"[Audit] UserId: {userId}, UserEmail: {userEmail}");
+        _logger.LogInformation(
+        "Audit UserId={UserId} UserEmail={UserEmail}",
+        userId,
+        userEmail);
 
         if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(userEmail))
         {

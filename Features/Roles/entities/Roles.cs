@@ -1,6 +1,8 @@
-public class Role : BaseEntity
+public class Role
 {
-    public RolesEnum Roles {get; set;}
+    public Guid Id { get; set; }
+    
+    public RolesEnum Roles { get; set; }
 
     public ICollection<UserRole> UserRoles { get; set; } = [];
 

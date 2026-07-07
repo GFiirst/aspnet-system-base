@@ -1,8 +1,10 @@
-public class Permissions :BaseEntity
+public class Permissions
 {
-    public PermissionAction Action{get; set;}
+    public Guid Id { get; set; }
+    
+    public PermissionAction Action { get; set; }
 
-    public string Subject {get; set;} = "";
+    public string Subject { get; set; } = "";
 
     public ICollection<RolesPermissions> RolesPermissions { get; set; } = [];
 }

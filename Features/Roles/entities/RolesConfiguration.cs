@@ -7,9 +7,10 @@ public class RolesConfiguration : IEntityTypeConfiguration<Role>
         EntityTypeBuilder<Role> builder
     )
     {
-        builder.ConfigureBase();
-
         builder.ToTable("roles");
+
+        builder.Property(x => x.Id)
+            .HasColumnName("id");
 
         builder.Property(x => x.Roles)
             .HasColumnName("role")

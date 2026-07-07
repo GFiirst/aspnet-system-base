@@ -7,9 +7,10 @@ public class PermissionsConfiguration : IEntityTypeConfiguration<Permissions>
         EntityTypeBuilder<Permissions> builder
     )
     {
-        builder.ConfigureBase();
-
         builder.ToTable("permissions");
+
+        builder.Property(x => x.Id)
+            .HasColumnName("id");
 
         builder.Property(x => x.Action)
             .HasColumnName("action")

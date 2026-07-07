@@ -12,7 +12,7 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Po
 
 **Gerar migration**
 
-dotnet ef migrations add InitialCreatedotnet tool restore
+dotnet ef migrations add InitialCreatedotnet
 
 **Rodar migration**
 

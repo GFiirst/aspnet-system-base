@@ -88,6 +88,9 @@ public class AppDbContext : DbContext
                     .HasQueryFilter(lambda);
             }
         }
+
+        modelBuilder.Entity<UserRole>()
+        .HasQueryFilter(x => x.User.DeletedAt == null);
     }
     
 }

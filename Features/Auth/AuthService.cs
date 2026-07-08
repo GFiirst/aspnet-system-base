@@ -6,6 +6,7 @@ using YourProject.Utils;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 
 public class AuthService : IAuthService
 {
@@ -13,21 +14,25 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly JwtSettings _jwt;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         AppDbContext context,
         ITokenService tokenService,
         IOptions<JwtSettings> jwt,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AuthService> logger)
     {
         _context = context;
         _tokenService = tokenService;
         _jwt = jwt.Value;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task<ResponseLoginDto> LoginAsync(LoginDto dto, HttpContext httpContext)
     {   
+        _logger.LogInformation("Authentication started");
 
         var httpContextExist = _httpContextAccessor.HttpContext;
 
@@ -71,13 +76,14 @@ public class AuthService : IAuthService
                             {
                                 storedToken.Status = TokenStatusEnum.revoked;
                                 await _context.SaveChangesAsync();
+                                _logger.LogInformation("Existing refresh token revoked");
                             }
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    
+                    _logger.LogWarning(ex, "Invalid refresh token during login");
                 }
 
                 httpContext.Response.Cookies.Delete("refresh_token");
@@ -93,6 +99,7 @@ public class AuthService : IAuthService
 
         if (userExist == null)
         {
+            _logger.LogWarning("Authentication failed: User not found");
             throw new UnauthorizedException("Email ou senha invalida");
         }
 
@@ -101,6 +108,7 @@ public class AuthService : IAuthService
 
         if (!validPass)
         {
+            _logger.LogWarning("Authentication failed: Invalid password");
             throw new UnauthorizedException("Email ou senha invalida");
         }
 
@@ -120,6 +128,7 @@ public class AuthService : IAuthService
 
             oldestSession.Status = TokenStatusEnum.revoked;
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Oldest session revoked due to max session limit");
         }
 
         var accessToken = _tokenService.CreateToken(userExist);
@@ -165,6 +174,8 @@ public class AuthService : IAuthService
         _context.RefreshTokens.Add(refreshEntity);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Authentication succeeded");
+
         var userInfo = new UserResponseDto
         {
             Id = userExist.Id,
@@ -184,6 +195,7 @@ public class AuthService : IAuthService
     }
 
     public async Task<string> RefreshAsync(HttpContext httpContext){
+        _logger.LogInformation("Token refresh started");
 
         var refreshToken = httpContext.Request.Cookies["refresh_token"];
 
@@ -197,6 +209,7 @@ public class AuthService : IAuthService
 
         if (!Guid.TryParse(userIdString, out var userId))
         {
+            _logger.LogWarning("Token refresh failed: Invalid token format");
             throw new UnauthorizedException("Refresh token inválido.");
         }
 
@@ -207,13 +220,19 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
+            _logger.LogWarning("Token refresh failed: User not found");
             throw new UnauthorizedException("Usuário não encontrado.");
         }
-        return _tokenService.CreateToken(user);
+
+        var newToken = _tokenService.CreateToken(user);
+        _logger.LogInformation("Token refresh succeeded");
+        return newToken;
     }
 
     public async Task LogoutAsync(HttpContext httpContext)
     {
+        _logger.LogInformation("Logout started");
+
         var existingRefreshToken = httpContext.Request.Cookies?["refresh_token"];
 
         if (!string.IsNullOrEmpty(existingRefreshToken))
@@ -252,14 +271,20 @@ public class AuthService : IAuthService
                         {
                             storedToken.Status = TokenStatusEnum.revoked;
                             await _context.SaveChangesAsync();
+                            _logger.LogInformation("Refresh token revoked during logout");
                         }
                     }
                 }
             }
-            catch{}
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating refresh token during logout");
+            }
         }
 
         httpContext.Response.Cookies.Delete("refresh_token");
         httpContext.Response.Cookies.Delete("access_token");
+
+        _logger.LogInformation("Logout succeeded");
     }
 }

@@ -1,8 +1,12 @@
+using DotNetEnv;
 using Microsoft.AspNetCore.Authorization;
 using Serilog;
 using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Env.Load();
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddControllers();
 

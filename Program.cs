@@ -63,6 +63,8 @@ builder.Services.AddScoped<AuditInterceptor>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddRateLimiter();
+
 var app = builder.Build();
 
 await app.SeedDatabaseAsync();
@@ -80,6 +82,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowSpecificOrigins");
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

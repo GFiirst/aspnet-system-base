@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 [ApiController]
 [Route("auth")]
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("sign-up")]
     [AllowAnonymous]
+    [EnableRateLimiting("Default")]
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
         var result = await _userService.CreateUserAsync(dto);
@@ -28,6 +30,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("Default")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var result = await _authService.LoginAsync(dto, HttpContext);
@@ -59,6 +62,7 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     [AllowAnonymous]
     [RefreshTokenAuthorize]
+    [EnableRateLimiting("Default")]
     public async Task<IActionResult> RefreshToken()
     {
         var accessToken = await _authService.RefreshAsync(HttpContext);
@@ -84,6 +88,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("logout")]
     [AllowAnonymous]
+    [EnableRateLimiting("Default")]
     public async Task<IActionResult> Logout()
     {   
         await _authService.LogoutAsync(HttpContext);
@@ -92,7 +97,7 @@ public class AuthController : ControllerBase
 
 
     [HttpGet("teste")]
-    [Authorize(Policy = Policies.UserCreate)]
+    [EnableRateLimiting("Default")]
     public async Task<IActionResult> testeToken()
     {
         return Ok("passou");

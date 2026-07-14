@@ -1,7 +1,9 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -96,6 +98,25 @@ public static class ServiceCollectionExtensions
                     .RequireAuthenticatedUser()
                     .Build()
             );
+
+        return services;
+    }
+
+    public static IServiceCollection AddRateLimiter(
+        this IServiceCollection services
+    )
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.AddFixedWindowLimiter("Default", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 5;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0;
+            });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        });
 
         return services;
     }

@@ -12,12 +12,10 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         
         builder.Property(x => x.UserId)
         .HasColumnName("user_id");
-        
-        builder.Property(x => x.UserEmail)
-        .HasColumnName("user_email");
-        
+
         builder.Property(x => x.EntityName)
-        .HasColumnName("entity_name");
+        .HasColumnName("entity_name")
+        .HasMaxLength(255);
         
         builder.Property(x => x.EntityId)
         .HasColumnName("entity_id");
@@ -36,6 +34,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         .HasColumnName("timestamp");
         
         builder.Property(x => x.IpAddress)
-        .HasColumnName("ip_address");
+        .HasColumnName("ip_address")
+        .HasMaxLength(45);
     }
 }

@@ -24,8 +24,7 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("Default")]
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
-        var result = await _userService.CreateUserAsync(dto);
-        return Ok(result);
+        return Ok(await _userService.CreateUserAsync(dto));
     }
 
     [HttpPost("login")]
@@ -95,11 +94,21 @@ public class AuthController : ControllerBase
         return Ok();
     }
 
-
-    [HttpGet("teste")]
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
     [EnableRateLimiting("Default")]
-    public async Task<IActionResult> testeToken()
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
-        return Ok("passou");
+        await _authService.ForgotPasswordAsync(dto);
+        return Ok(new { message = "Se existir uma conta vinculada a este e-mail, uma mensagem de recuperação será enviada." });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("Default")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+        await _authService.ResetPasswordAsync(dto);
+        return Ok(new { message = "Senha redefinida com sucesso." });
     }
 }

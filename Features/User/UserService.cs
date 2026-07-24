@@ -6,17 +6,25 @@ public class UserService : IUserService
 
     private readonly ILogger<UserService> _logger;
 
-    public UserService(AppDbContext context, ILogger<UserService> logger)
+    private readonly IEncryptionService _encryptionService;
+
+    public UserService(AppDbContext context, ILogger<UserService> logger, IEncryptionService encryptionService)
     {
         _context = context;
         _logger = logger;
+        _encryptionService = encryptionService;
     }
 
     public async Task<UserResponseDto> CreateUserAsync(CreateUserDto dto)
     {
         _logger.LogInformation("User creation started");
 
-        var userExist = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var normalizedEmail = dto.Email.ToLowerInvariant();
+
+        var emailHash = _encryptionService.ComputeHash(normalizedEmail);
+
+        var userExist = await _context.Users
+            .FirstOrDefaultAsync(u => u.EmailHash == emailHash);
 
         if(userExist != null)
         {   
@@ -24,11 +32,14 @@ public class UserService : IUserService
             throw new ConflictException("Email já existe.");
         }
 
+        var encryptedEmail = _encryptionService.Encrypt(normalizedEmail);
+
         var user = new User
         {   
             Id = Guid.NewGuid(),
             Name = dto.Name,
-            Email = dto.Email,
+            EmailEncrypted = encryptedEmail,
+            EmailHash = emailHash,
             Password = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12)
         };
 
@@ -52,11 +63,13 @@ public class UserService : IUserService
         _logger.LogInformation("User creation succeeded");
         await _context.SaveChangesAsync();
 
+        var decryptedEmail = _encryptionService.Decrypt(user.EmailEncrypted);
+
         return new UserResponseDto
         {
             Id = user.Id,
             Name = user.Name,
-            Email = user.Email,
+            Email = decryptedEmail,
             CreatedAt = user.CreatedAt,
             Roles = [role.Roles.ToString()]
         };

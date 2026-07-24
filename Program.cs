@@ -2,13 +2,21 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authorization;
 using Serilog;
 using Serilog.Events;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 Env.Load();
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 builder.Services.AddCors(options =>
 {
@@ -32,6 +40,38 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.Configure<FileUploadOptions>(options =>
+    {
+        options.AllowedExtensions = [
+            ".pdf",
+            ".jpg", ".jpeg", ".png", ".gif", ".webp",
+            ".doc", ".docx",
+            ".xls", ".xlsx",
+            ".txt"
+        ];
+
+        options.AllowedMimeTypes = [
+            "application/pdf",
+            "image/jpeg", "image/png", "image/gif", "image/webp",
+            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/plain"
+        ];
+
+        options.MaxSize = 10 * 1024 * 1024;
+
+        options.UploadPath = builder.Configuration["FILE_PATH"] ?? "uploads";
+    });
+
+builder.Services.Configure<EmailSettings>(options =>
+    {
+        options.MailUser = builder.Configuration["MAIL_USER"] ?? "";
+        options.MailPass = builder.Configuration["MAIL_PASS"] ?? "";
+        options.FrontendUrl = builder.Configuration["FRONTEND_URL"] ?? "";
+    });
+
+
+
 var outputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}";
 
 Log.Logger = new LoggerConfiguration()
@@ -48,6 +88,8 @@ builder.Host.UseSerilog();
 
 builder.Services.AddDatabase(builder.Configuration);
 
+builder.Services.AddEncryptionService(builder.Configuration);
+
 builder.Services.AddApplicationServices();
 
 builder.Services.AddApiValidation();
@@ -57,8 +99,6 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAuthorization(Policies.ConfigurePolicies);
-builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
-builder.Services.AddScoped<AuditInterceptor>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

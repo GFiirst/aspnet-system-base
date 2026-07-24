@@ -5,4 +5,8 @@ public interface IAuthService
     Task<string> RefreshAsync(HttpContext httpContext);
 
     Task LogoutAsync(HttpContext httpContext);
+
+    Task ForgotPasswordAsync(ForgotPasswordDto dto);
+
+    Task ResetPasswordAsync(ResetPasswordDto dto);
 }

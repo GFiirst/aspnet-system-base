@@ -7,10 +7,12 @@ using Microsoft.IdentityModel.Tokens;
 public class TokenService : ITokenService
 {
     private readonly JwtSettings _jwt;
+    private readonly IEncryptionService _encryptionService;
 
-    public TokenService(IOptions<JwtSettings> jwt)
+    public TokenService(IOptions<JwtSettings> jwt, IEncryptionService encryptionService)
     {
         _jwt = jwt.Value;
+        _encryptionService = encryptionService;
     }
 
     public string CreateToken(User user)
@@ -18,7 +20,6 @@ public class TokenService : ITokenService
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

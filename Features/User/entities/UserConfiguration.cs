@@ -14,13 +14,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         .HasColumnName("name")
         .HasMaxLength(100);
 
-        builder.HasIndex(x => x.Email)
+        builder.Property(x => x.EmailEncrypted)
+        .HasColumnName("email_encrypted")
+        .HasMaxLength(256);
+
+        builder.HasIndex(x => x.EmailHash)
         .IsUnique()
         .HasFilter("deleted_at IS NULL");
 
-        builder.Property(x => x.Email)
-        .HasColumnName("email")
-        .HasMaxLength(255);
+        builder.Property(x => x.EmailHash)
+        .HasColumnName("email_hash")
+        .HasMaxLength(64);
 
         builder.Property(x => x.Password)
         .HasColumnName("password")

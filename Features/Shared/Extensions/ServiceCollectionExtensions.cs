@@ -28,6 +28,26 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IFileValidator, FileValidator>();
+        services.AddScoped<IFileUploadService, FileUploadService>();
+        services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+        services.AddScoped<AuditInterceptor>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddEncryptionService(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var encryptionKey = configuration["Encryption:Key"];
+        
+        if (string.IsNullOrEmpty(encryptionKey))
+        {
+            encryptionKey = "DefaultKeyForDesignTime32Chars!!";
+        }
+
+        services.AddSingleton<IEncryptionService>(new AesEncryptionService(encryptionKey));
 
         return services;
     }
@@ -38,15 +58,16 @@ public static class ServiceCollectionExtensions
         services.Configure<ApiBehaviorOptions>(options =>
         {
             options.InvalidModelStateResponseFactory = context =>
-            {
-                var firstError = context.ModelState
-                    .Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .FirstOrDefault();
+        {
+            var errors = context.ModelState
+                .SelectMany(x => x.Value!.Errors)
+                .Select(e => !string.IsNullOrWhiteSpace(e.ErrorMessage)
+                    ? e.ErrorMessage
+                    : e.Exception?.Message)
+                .ToList();
 
-                return new BadRequestObjectResult(firstError);
-            };
+            return new BadRequestObjectResult(errors);
+        };
         });
 
         return services;

@@ -40,27 +40,13 @@ public class AuditInterceptor : SaveChangesInterceptor
         var httpContext = _httpContextAccessor.HttpContext;
 
         string? userId = null;
-        string? userEmail = null;
         string? ipAddress = null;
 
         if (httpContext != null)
         {
             userId = httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
                 ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            userEmail = httpContext.User.FindFirst(ClaimTypes.Email)?.Value;
             ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
-        }
-        else
-        {
-            userEmail = "System";
-        }
-
-        if (httpContext != null &&
-            string.IsNullOrWhiteSpace(userId) &&
-            string.IsNullOrWhiteSpace(userEmail))
-        {
-            userEmail = "Anonymous";
         }
 
         var entries = context.ChangeTracker.Entries()
@@ -77,7 +63,6 @@ public class AuditInterceptor : SaveChangesInterceptor
             var auditLog = new AuditLog
             {
                 UserId = Guid.TryParse(userId, out var guid) ? guid : null,
-                UserEmail = userEmail,
                 EntityName = entry.Entity.GetType().Name,
                 EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString() ?? "",
                 Action = entry.State switch

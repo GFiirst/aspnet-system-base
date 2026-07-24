@@ -7,12 +7,17 @@ Sistema base de autenticação e autorização em ASP.NET Core 10.0, projetado p
 - **Autenticação JWT**: Sistema de tokens com access token (15 min) e refresh token (30 dias)
 - **Gerenciamento de Usuários**: CRUD completo de usuários com hash de senhas (BCrypt)
 - **Roles e Permissões**: Sistema granular de autorização baseado em roles e permissões
+- **Recuperação de Senha**: Sistema de recuperação via email com token JWT
+- **Criptografia de Dados**: Criptografia AES-256 para dados sensíveis
+- **Upload de Arquivos**: Suporte a múltiplos formatos (PDF, imagens, documentos, planilhas, texto)
+- **Validações**: Validadores de CPF e telefone para uso futuro
 - **Audit Logging**: Rastreamento automático de ações no banco de dados
 - **CORS Configurável**: Suporte a múltiplas origens para frontend
 - **Logging com Serilog**: Logs estruturados em arquivo e console
 - **Swagger UI**: Documentação automática da API
 - **PostgreSQL**: Banco de dados relacional com Entity Framework Core
 - **Middleware de Erros**: Tratamento global de exceções
+- **Rate Limiting**: Proteção contra abuso de API
 
 ## 🛠️ Tech Stack
 
@@ -23,7 +28,9 @@ Sistema base de autenticação e autorização em ASP.NET Core 10.0, projetado p
 - **JWT Bearer Authentication**
 - **Serilog** (Logging)
 - **BCrypt.Net** (Hash de senhas)
+- **MailKit** (Envio de emails)
 - **Swagger/OpenAPI**
+- **DotNetEnv** (Variáveis de ambiente)
 
 ## 📋 Pré-requisitos
 
@@ -57,16 +64,32 @@ ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=SEU_BANCO
 # JWT Configuration
 Jwt__AccessKey=your-super-secret-access-key-min-32-chars
 Jwt__RefreshKey=your-super-secret-refresh-key-min-32-chars
+Jwt__ResetPasswordKey=your-super-secret-reset-key-min-32-chars
 Jwt__Issuer=AuthApi
 Jwt__Audience=AuthApiUsers
 Jwt__AccessExpirationMinutes=15
+Jwt__ResetPasswordExpirationMinutes=15
 Jwt__RefreshExpirationDays=30
 
 # CORS Configuration
 Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
+
+# File Upload Configuration
+FILE_PATH=uploads
+
+# Email Configuration (para recuperação de senha)
+MAIL_USER=seu-email@gmail.com
+MAIL_PASS=sua-senha-app
+FRONTEND_URL=http://localhost:3000
+
+# Encryption Configuration (chave deve ter exatamente 32 bytes)
+Encryption__Key=MinhaChaveSecretaDe32BytesAES256
 ```
 
-**Importante**: As chaves JWT devem ter no mínimo 32 caracteres.
+**Importante**: 
+- As chaves JWT devem ter no mínimo 32 caracteres
+- A chave de criptografia deve ter exatamente 32 bytes (256 bits)
+- Para usar o Gmail, configure uma senha de app em configurações da conta Google
 
 ### 3. Configure o banco de dados PostgreSQL
 
@@ -141,11 +164,15 @@ aspnet-system-base/
 │   │   └── entities/         # AuditLog
 │   ├── Infrastructure/       # Configurações de infraestrutura
 │   │   ├── Data/             # DbContext e Migrations
-│   │   └── Jwt/              # Serviço de tokens JWT
+│   │   ├── Jwt/              # Serviço de tokens JWT
+│   │   ├── Email/            # Configurações de email
+│   │   ├── Encryption/       # Serviço de criptografia AES-256
+│   │   └── Validation/       # Validadores (CPF, Telefone)
 │   └── Shared/               # Componentes compartilhados
 │       ├── Extensions/       # Extension methods
 │       ├── Middlewares/      # Global error handling
 │       ├── Seeds/            # Seeders iniciais
+│       ├── Upload/           # Serviço de upload de arquivos
 │       └── Exceptions/       # Exceções customizadas
 ├── Program.cs                # Entry point e configuração
 ├── appsettings.json          # Configurações da aplicação
@@ -192,6 +219,27 @@ POST /auth/refresh
 #### Logout
 ```http
 POST /auth/logout
+```
+
+#### Esqueci Senha
+```http
+POST /auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "usuario@email.com"
+}
+```
+
+#### Resetar Senha
+```http
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "jwt-reset-token",
+  "newPassword": "novaSenha123"
+}
 ```
 
 ### Usuários
@@ -287,6 +335,10 @@ dotnet ef database update
 - **Logging**: Logs configurados com Serilog
 - **Error Handling**: Middleware global de erros
 - **CORS**: Configure as origens no `.env`
+- **Upload de Arquivos**: Use `IFileUploadService` para uploads
+- **Criptografia**: Use `IEncryptionService` para criptografar dados sensíveis
+- **Email**: Use `EmailSettings` para envio de emails
+- **Validações**: Use `[CpfValidation]` e `[PhoneValidation]` atributos
 
 ## 📝 Logging
 
@@ -294,12 +346,15 @@ Os logs são salvos em `logs/log-{data}.txt` com retenção de 15 dias. O format
 
 ## 🔒 Segurança
 
-- Senhas hash com BCrypt
+- Senhas hash com BCrypt (work factor 12)
 - Tokens JWT com assinatura HMAC-SHA256
+- Tokens de refresh token com hash SHA256
 - Cookies HttpOnly e Secure
+- Criptografia AES-256 para dados sensíveis
 - CORS configurável
 - Audit trail de todas as operações
-- Rate limiting (recomendado adicionar em produção)
+- Rate limiting (5 requisições por minuto por IP)
+- Validação de CPF e telefone
 
 ## 🧪 Testes
 
@@ -317,6 +372,7 @@ dotnet add aspnet-system-base.Tests/aspnet-system-base.Tests.csproj reference as
 - `Npgsql.EntityFrameworkCore.PostgreSQL` - Provider PostgreSQL
 - `BCrypt.Net-Next` - Hash de senhas
 - `Serilog.AspNetCore` - Logging
+- `MailKit` - Envio de emails
 - `DotNetEnv` - Carregamento de .env
 - `Swashbuckle.AspNetCore` - Swagger
 

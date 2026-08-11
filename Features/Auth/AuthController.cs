@@ -8,15 +8,22 @@ public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IAuthService _authService;
-
+    private readonly IConfiguration _configuration;
     public AuthController
     (
         IUserService userService,
-        IAuthService authService
+        IAuthService authService,
+        IConfiguration configuration
     )
     {
         _userService = userService;
         _authService = authService;
+        _configuration = configuration;
+    }
+
+    private bool GetSecureCookieSetting()
+    {
+        return _configuration.GetValue<bool>("CookieSettings:Secure", true);
     }
 
     [HttpPost("sign-up")]
@@ -40,7 +47,7 @@ public class AuthController : ControllerBase
             new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddMinutes(15)
             });
@@ -51,7 +58,7 @@ public class AuthController : ControllerBase
             new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
@@ -72,7 +79,7 @@ public class AuthController : ControllerBase
             new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddMinutes(15)
             });

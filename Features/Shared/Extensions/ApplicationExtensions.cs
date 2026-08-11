@@ -7,11 +7,13 @@ public static class ApplicationExtensions
     )
     {
         using var scope = app.Services.CreateScope();
-
+        
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var encryptionService = scope.ServiceProvider.GetRequiredService<IEncryptionService>();
 
         await RoleSeeder.SeedAsync(context);
         await PermissionSeeder.SeedAsync(context);
         await RolePermissionSeeder.SeedAsync(context);
+        await UserAdminSeeder.SeedAsync(context, encryptionService);
     }
 }

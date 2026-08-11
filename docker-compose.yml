@@ -1,0 +1,87 @@
+name: aspnet-system-base
+
+services:
+  aspnet-system-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aspnet-system-base
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+
+      # Banco de dados
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+
+      # JWT
+      - Jwt__AccessKey=${Jwt__AccessKey}
+      - Jwt__RefreshKey=${Jwt__RefreshKey}
+      - Jwt__ResetPasswordKey=${Jwt__ResetPasswordKey}
+      - Jwt__Issuer=${Jwt__Issuer:-AuthApi}
+      - Jwt__Audience=${Jwt__Audience:-AuthApiUsers}
+      - Jwt__AccessExpirationMinutes=${Jwt__AccessExpirationMinutes:-15}
+      - Jwt__ResetPasswordExpirationMinutes=${Jwt__ResetPasswordExpirationMinutes:-15}
+      - Jwt__RefreshExpirationDays=${Jwt__RefreshExpirationDays:-30}
+
+      # Aplicação
+      - Cors__AllowedOrigins=${Cors__AllowedOrigins}
+      - FILE_PATH=/app/uploads
+      - LOG_PATH=/app/logs
+      - FRONTEND_URL=${FRONTEND_URL}
+
+      # Email
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
+
+      # Criptografia
+      - Encryption__Key=${Encryption__Key}
+
+      # Seed Admin
+      - ADMIN_NAME=${ADMIN_NAME}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+    volumes:
+      - ${HOST_UPLOAD_PATH:-./uploads}:/app/uploads
+      - ${HOST_LOG_PATH:-./logs}:/app/logs
+
+    networks:
+      - system-base-network
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18
+    container_name: system-base-postgres
+
+    ports:
+      - "5433:5432"
+
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+
+    volumes:
+      - ${HOST_POSTGRES_PATH:-./postgres-data}:/var/lib/postgresql
+
+    networks:
+      - system-base-network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  system-base-network:
+    driver: bridge

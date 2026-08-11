@@ -18,6 +18,15 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
         var userId = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return;
         
+        var isAdmin = await _context.UserRoles
+            .AnyAsync(ur => ur.UserId == Guid.Parse(userId) && ur.Role.Roles == RolesEnum.admin);
+        
+        if (isAdmin)
+        {
+            context.Succeed(requirement);
+            return;
+        }
+        
         var hasPermission = await _context.UserRoles
             .Where(ur => ur.UserId == Guid.Parse(userId))
             .SelectMany(ur => ur.Role.RolesPermissions)

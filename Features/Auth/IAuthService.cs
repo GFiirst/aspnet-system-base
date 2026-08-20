@@ -9,4 +9,6 @@ public interface IAuthService
     Task ForgotPasswordAsync(ForgotPasswordDto dto);
 
     Task ResetPasswordAsync(ResetPasswordDto dto);
+
+    Task<ValidateResponseDto> ValidateAsync(HttpContext httpContext);
 }

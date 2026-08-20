@@ -374,6 +374,34 @@ public class AuthService : IAuthService
         _logger.LogInformation("Password reset completed for user: {UserId}", userId);
     }
 
+    public async Task<ValidateResponseDto> ValidateAsync(HttpContext httpContext)
+    {
+        var userIdClaim = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            throw new UnauthorizedException("Token inválido.");
+        }
+
+        var user = await _context.Users
+            .Include(x => x.UserRoles)
+            .ThenInclude(x => x.Role)
+            .FirstOrDefaultAsync(x => x.Id == userId);
+
+        if (user is null)
+        {
+            throw new UnauthorizedException("Usuário não encontrado.");
+        }
+
+        return new ValidateResponseDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = _encryptionService.Decrypt(user.EmailEncrypted),
+            Roles = user.UserRoles.Select(x => x.Role.Roles.ToString()).ToList()
+        };
+    }
+
     private string GeneratePasswordResetToken(Guid userId)
     {
         var jti = Guid.NewGuid().ToString();

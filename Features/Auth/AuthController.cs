@@ -101,6 +101,12 @@ public class AuthController : ControllerBase
         return Ok();
     }
 
+    [HttpGet("validate")]
+    public async Task<IActionResult> Validate()
+    {
+        return Ok(await _authService.ValidateAsync(HttpContext));
+    }
+
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]

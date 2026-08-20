@@ -28,7 +28,7 @@ services:
       # Aplicação
       - Cors__AllowedOrigins=${Cors__AllowedOrigins}
       - FILE_PATH=/app/uploads
-      - LOG_PATH=/app/logs
+      - LOG_PATH=${LOG_PATH:-/app/logs}
       - FRONTEND_URL=${FRONTEND_URL}
 
       # Email

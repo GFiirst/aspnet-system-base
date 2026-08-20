@@ -54,7 +54,12 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddAuthorization(Policies.ConfigurePolicies);
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
+            options.EnableAnnotations();
+        });
         services.AddRateLimiter();
         services.AddHealthChecks();
 

@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Swashbuckle.AspNetCore.Annotations;
 
+/// <summary>Gerencia autenticação, sessão e recuperação de senha.</summary>
 [ApiController]
 [Route("auth")]
+[Tags("Autenticação")]
 public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -29,6 +32,10 @@ public class AuthController : ControllerBase
     [HttpPost("sign-up")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Registrar usuário")]
+    [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateUser(CreateUserDto dto)
     {   
         return Ok(await _userService.CreateUserAsync(dto));
@@ -37,6 +44,9 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Autenticar usuário")]
+    [ProducesResponseType(typeof(ResponseLoginDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var result = await _authService.LoginAsync(dto, HttpContext);
@@ -69,6 +79,9 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     [RefreshTokenAuthorize]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Renovar token de acesso")]
+    [ProducesResponseType(typeof(RefreshResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken()
     {
         var accessToken = await _authService.RefreshAsync(HttpContext);
@@ -95,6 +108,8 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Encerrar sessão")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout()
     {   
         await _authService.LogoutAsync(HttpContext);
@@ -102,6 +117,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("validate")]
+    [SwaggerOperation(Summary = "Validar sessão autenticada")]
+    [ProducesResponseType(typeof(ValidateResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Validate()
     {
         return Ok(await _authService.ValidateAsync(HttpContext));
@@ -110,6 +128,8 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Solicitar recuperação de senha")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         await _authService.ForgotPasswordAsync(dto);
@@ -119,6 +139,9 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting("Default")]
+    [SwaggerOperation(Summary = "Redefinir senha")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         await _authService.ResetPasswordAsync(dto);

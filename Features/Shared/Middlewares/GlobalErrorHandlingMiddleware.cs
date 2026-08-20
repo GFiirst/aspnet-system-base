@@ -1,3 +1,5 @@
+using Serilog;
+
 public class GlobalErrorHandlingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -15,6 +17,8 @@ public class GlobalErrorHandlingMiddleware
         }
         catch (AppException ex)
         {
+            Log.Warning(ex, "Exceção da aplicação: {Message}", ex.Message);
+
             await WriteErrorAsync(
                 context,
                 ex.StatusCode,
@@ -23,7 +27,7 @@ public class GlobalErrorHandlingMiddleware
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            Log.Error(ex, "Erro não tratado: {Message}", ex.Message);
 
             await WriteErrorAsync(
                 context,

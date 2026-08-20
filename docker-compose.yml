@@ -29,6 +29,7 @@ services:
       - Cors__AllowedOrigins=${Cors__AllowedOrigins}
       - FILE_PATH=/app/uploads
       - LOG_PATH=${LOG_PATH:-/app/logs}
+      - APPLY_MIGRATIONS_ON_STARTUP=${APPLY_MIGRATIONS_ON_STARTUP:-true}
       - FRONTEND_URL=${FRONTEND_URL}
 
       # Email

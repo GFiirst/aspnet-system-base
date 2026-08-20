@@ -145,13 +145,15 @@ public class AuthService : IAuthService
         var accessToken = _tokenService.CreateToken(userExist);
 
         var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
+        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
         var refreshEntity = new RefreshToken
         {
             Id = Guid.NewGuid(),
             UserId = userExist.Id,
             UserAgent = userAgent,
-            Ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            IpEncrypted = _encryptionService.Encrypt(ipAddress),
+            IpHash = _encryptionService.ComputeHash(ipAddress),
             Device = DeviceHelper.ExtractDevice(userAgent),
             ExpiredAt = DateTime.UtcNow.AddDays(30),
         };

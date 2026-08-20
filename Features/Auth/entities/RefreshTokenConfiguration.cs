@@ -34,9 +34,15 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasColumnName("user_agent")
             .HasMaxLength(600);
 
-        builder.Property(x => x.Ip)
-            .HasColumnName("ip")
-            .HasMaxLength(45);
+        builder.Property(x => x.IpEncrypted)
+            .HasColumnName("ip_encrypted")
+            .HasMaxLength(256);
+
+        builder.HasIndex(x => x.IpHash);
+
+        builder.Property(x => x.IpHash)
+            .HasColumnName("ip_hash")
+            .HasMaxLength(64);
 
         builder.HasOne(x => x.User)
             .WithMany(x => x.RefreshTokens)

@@ -10,7 +10,9 @@ public class RefreshToken : BaseEntity
 
     public string? Device {get; set;}
 
-    public string? Ip {get; set;}
+    public string? IpEncrypted {get; set;}
+
+    public string? IpHash {get; set;}
 
     public Guid UserId { get; set; }
 

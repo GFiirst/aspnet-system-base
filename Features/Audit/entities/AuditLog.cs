@@ -16,5 +16,7 @@ public class AuditLog
     
     public DateTime Timestamp { get; set; }
     
-    public string? IpAddress { get; set; }
+    public string? IpAddressEncrypted { get; set; }
+
+    public string? IpAddressHash { get; set; }
 }

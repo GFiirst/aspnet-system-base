@@ -33,8 +33,14 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(x => x.Timestamp)
         .HasColumnName("timestamp");
         
-        builder.Property(x => x.IpAddress)
-        .HasColumnName("ip_address")
-        .HasMaxLength(45);
+        builder.Property(x => x.IpAddressEncrypted)
+        .HasColumnName("ip_address_encrypted")
+        .HasMaxLength(256);
+
+        builder.HasIndex(x => x.IpAddressHash);
+
+        builder.Property(x => x.IpAddressHash)
+        .HasColumnName("ip_address_hash")
+        .HasMaxLength(64);
     }
 }

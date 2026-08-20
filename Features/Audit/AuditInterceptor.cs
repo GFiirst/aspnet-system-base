@@ -9,11 +9,16 @@ public class AuditInterceptor : SaveChangesInterceptor
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     private readonly ILogger<AuditInterceptor> _logger;
+    private readonly IEncryptionService _encryptionService;
 
-    public AuditInterceptor(IHttpContextAccessor httpContextAccessor, ILogger<AuditInterceptor> logger)
+    public AuditInterceptor(
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AuditInterceptor> logger,
+        IEncryptionService encryptionService)
     {
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
+        _encryptionService = encryptionService;
     }
 
     public override InterceptionResult<int> SavingChanges(
@@ -73,7 +78,8 @@ public class AuditInterceptor : SaveChangesInterceptor
                     _ => AuditAction.read
                 },
                 Timestamp = DateTime.UtcNow,
-                IpAddress = ipAddress
+                IpAddressEncrypted = ipAddress is null ? null : _encryptionService.Encrypt(ipAddress),
+                IpAddressHash = ipAddress is null ? null : _encryptionService.ComputeHash(ipAddress)
             };
 
             if (entry.State == EntityState.Modified)

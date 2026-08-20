@@ -1,398 +1,354 @@
 # ASP.NET System Base
 
-Sistema base de autenticação e autorização em ASP.NET Core 10.0, projetado para servir como fundação para outros sistemas. Este projeto fornece uma infraestrutura completa de autenticação JWT, gerenciamento de usuários, roles e permissões.
+API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticação por JWT, sessões com refresh token, recuperação de senha e infraestrutura inicial de autorização, auditoria, criptografia e upload.
 
-## 🚀 Características
+> Estado atual: a API expõe os fluxos de autenticação e o health check. Roles, permissões e upload já fazem parte da infraestrutura, mas ainda não possuem endpoints próprios. `Features/User/UserController.cs` está vazio; portanto, não há CRUD público de usuários nesta versão.
 
-- **Autenticação JWT**: Sistema de tokens com access token (15 min) e refresh token (30 dias)
-- **Gerenciamento de Usuários**: CRUD completo de usuários com hash de senhas (BCrypt)
-- **Roles e Permissões**: Sistema granular de autorização baseado em roles e permissões
-- **Recuperação de Senha**: Sistema de recuperação via email com token JWT
-- **Criptografia de Dados**: Criptografia AES-256 para dados sensíveis
-- **Upload de Arquivos**: Suporte a múltiplos formatos (PDF, imagens, documentos, planilhas, texto)
-- **Validações**: Validadores de CPF e telefone para uso futuro
-- **Audit Logging**: Rastreamento automático de ações no banco de dados
-- **CORS Configurável**: Suporte a múltiplas origens para frontend
-- **Logging com Serilog**: Logs estruturados em arquivo e console
-- **Swagger UI**: Documentação automática da API
-- **PostgreSQL**: Banco de dados relacional com Entity Framework Core
-- **Middleware de Erros**: Tratamento global de exceções
-- **Rate Limiting**: Proteção contra abuso de API
+## Funcionalidades
 
-## 🛠️ Tech Stack
+- Cadastro com a role `user` atribuída automaticamente.
+- Login com access token e refresh token em cookies HttpOnly.
+- Renovação do access token, logout e validação da sessão.
+- Recuperação de senha por e-mail via Gmail SMTP.
+- Limite de cinco sessões ativas por usuário; a mais antiga é revogada ao exceder o limite.
+- Senhas com BCrypt; e-mails, IPs de sessão e IPs de auditoria criptografados com AES-256.
+- Refresh tokens armazenados somente como hash SHA-256.
+- Auditoria automática de inclusões, alterações e exclusões feitas pelo EF Core.
+- Roles e permissões sincronizadas no startup por seeders.
+- Rate limiting de 5 requisições por minuto nos endpoints anotados com a policy `Default`.
+- Tratamento global de erros, CORS, Serilog, Swagger e health check.
+- Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone.
 
-- **.NET 10.0**
-- **ASP.NET Core Web API**
-- **Entity Framework Core 10.0**
-- **PostgreSQL** (via Npgsql)
-- **JWT Bearer Authentication**
-- **Serilog** (Logging)
-- **BCrypt.Net** (Hash de senhas)
-- **MailKit** (Envio de emails)
-- **Swagger/OpenAPI**
-- **DotNetEnv** (Variáveis de ambiente)
+## Tecnologias
 
-## 📋 Pré-requisitos
+- .NET 10, ASP.NET Core Web API e Entity Framework Core 10
+- PostgreSQL e Npgsql
+- JWT Bearer Authentication, BCrypt.Net, AES-256-CBC e SHA-256
+- MailKit, Serilog, Swashbuckle/OpenAPI e DotNetEnv
+- Docker e Docker Compose
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- PostgreSQL 12+
-- (Opcional) Docker para rodar o banco de dados
+## Como a autenticação funciona
 
-## 🔧 Instalação e Configuração
+O login cria dois cookies com `SameSite=Strict`:
 
-### 1. Clone o repositório
+| Cookie | Finalidade | Validade padrão |
+|---|---|---:|
+| `access_token` | Autenticar requisições protegidas | 15 minutos |
+| `refresh_token` | Emitir um novo access token | 30 dias |
 
-```bash
-git clone <seu-repositorio>
-cd aspnet-system-base
-```
+O handler JWT procura o token no cookie `access_token`; o header `Authorization: Bearer` não é lido pela configuração atual. Clientes web devem enviar credenciais (`credentials: "include"` no `fetch` ou equivalente).
 
-### 2. Configure as variáveis de ambiente
+Em desenvolvimento, `CookieSettings:Secure` é `false` para permitir HTTP. Em produção o padrão é `true`, portanto a API deve ser publicada atrás de HTTPS.
 
-Copie o arquivo de exemplo e configure as variáveis:
+## Pré-requisitos
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- PostgreSQL
+- Docker com Compose, caso prefira containers
+
+## Configuração local
+
+Crie o arquivo de ambiente:
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` com suas configurações:
+Preencha as configurações principais:
 
 ```env
-# Database Configuration
-ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=SEU_BANCO;Username=SEU_USUARIO;Password=SUA_SENHA
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=system_base;Username=postgres;Password=troque-a-senha
 
-# JWT Configuration
-Jwt__AccessKey=your-super-secret-access-key-min-32-chars
-Jwt__RefreshKey=your-super-secret-refresh-key-min-32-chars
-Jwt__ResetPasswordKey=your-super-secret-reset-key-min-32-chars
+Jwt__AccessKey=uma-chave-de-acesso-longa-e-segura
+Jwt__RefreshKey=uma-chave-de-refresh-longa-e-segura
+Jwt__ResetPasswordKey=uma-chave-de-reset-longa-e-segura
 Jwt__Issuer=AuthApi
 Jwt__Audience=AuthApiUsers
 Jwt__AccessExpirationMinutes=15
 Jwt__ResetPasswordExpirationMinutes=15
 Jwt__RefreshExpirationDays=30
 
-# CORS Configuration
+Encryption__Key=12345678901234567890123456789012
 Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
+APPLY_MIGRATIONS_ON_STARTUP=false
 
-# File Upload Configuration
-FILE_PATH=uploads
-
-# Email Configuration (para recuperação de senha)
-MAIL_USER=seu-email@gmail.com
-MAIL_PASS=sua-senha-app
+MAIL_USER=
+MAIL_PASS=
 FRONTEND_URL=http://localhost:3000
 
-# Encryption Configuration (chave deve ter exatamente 32 bytes)
-Encryption__Key=MinhaChaveSecretaDe32BytesAES256
+ADMIN_NAME=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+
+FILE_PATH=uploads
+LOG_PATH=logs
 ```
 
-**Importante**: 
-- As chaves JWT devem ter no mínimo 32 caracteres
-- A chave de criptografia deve ter exatamente 32 bytes (256 bits)
-- Para usar o Gmail, configure uma senha de app em configurações da conta Google
+Pontos importantes:
 
-### 3. Configure o banco de dados PostgreSQL
+- `Encryption__Key` precisa ter exatamente 32 bytes em UTF-8. Trocá-la depois de gravar dados impede a descriptografia dos valores existentes.
+- Use chaves JWT longas, aleatórias, diferentes entre si e fora do controle de versão.
+- `MAIL_USER` e `MAIL_PASS` autenticam em `smtp.gmail.com:587` com STARTTLS. Para Gmail, use uma senha de app.
+- O e-mail usa o link `${FRONTEND_URL}/reset-password?token=...`.
+- O admin inicial só é criado quando as três variáveis `ADMIN_*` estão preenchidas.
+- Se `Cors__AllowedOrigins` ficar vazio, a API aceita qualquer origem, sem credenciais.
 
-Crie o banco de dados no PostgreSQL:
-
-```sql
-CREATE DATABASE SEU_BANCO;
-```
-
-### 4. Restaure as dependências
+Restaure dependências e aplique as migrations:
 
 ```bash
 dotnet restore
-```
-
-### 5. Execute as migrations
-
-```bash
+dotnet tool restore
 dotnet ef database update
 ```
 
-Isso criará todas as tabelas necessárias e executará os seeders iniciais.
+Como alternativa, use `APPLY_MIGRATIONS_ON_STARTUP=true`. Os seeders de roles, permissões e admin sempre rodam no startup e são idempotentes.
 
-## 🏃 Como Rodar
-
-### Modo Desenvolvimento
+## Execução
 
 ```bash
 dotnet run
 ```
 
-A API estará disponível em `https://localhost:5001` ou `http://localhost:5000`
+O perfil HTTP padrão usa `http://localhost:4321`. Para o perfil HTTPS:
 
-### Swagger UI
-
-Em modo de desenvolvimento, acesse a documentação Swagger em:
-```
-https://localhost:5001/swagger
+```bash
+dotnet run --launch-profile https
 ```
 
-### Build para Produção
+- HTTPS: `https://localhost:7038`
+- HTTP alternativo: `http://localhost:5054`
+- Swagger em desenvolvimento: `/swagger`
+- Health check: `/health`
+
+Build Release:
 
 ```bash
 dotnet build -c Release
-dotnet run -c Release
+dotnet run -c Release --no-build
 ```
 
-## 📁 Estrutura do Projeto
+## Docker Compose
 
-```
-aspnet-system-base/
-├── Features/
-│   ├── Auth/                 # Autenticação (Login, Register, Refresh Token)
-│   │   ├── AuthController.cs
-│   │   ├── AuthService.cs
-│   │   ├── dto/              # DTOs de autenticação
-│   │   └── entities/         # Entidades de tokens
-│   ├── User/                 # Gerenciamento de usuários
-│   │   ├── UserController.cs
-│   │   ├── UserService.cs
-│   │   └── entities/         # Entidade User
-│   ├── Roles/                # Sistema de roles
-│   │   ├── enums/            # RolesEnum (admin, manager, agent, user)
-│   │   └── entities/         # Entidade Role
-│   ├── Permissions/          # Sistema de permissões
-│   │   ├── enum/             # PermissionAction (Create, Read, Update, Delete)
-│   │   ├── Policies.cs       # Definição de policies
-│   │   └── PermissionHandler.cs
-│   ├── Relations/           # Relações (User-Role, Role-Permission)
-│   ├── Audit/                # Sistema de auditoria
-│   │   ├── AuditInterceptor.cs
-│   │   └── entities/         # AuditLog
-│   ├── Infrastructure/       # Configurações de infraestrutura
-│   │   ├── Data/             # DbContext e Migrations
-│   │   ├── Jwt/              # Serviço de tokens JWT
-│   │   ├── Email/            # Configurações de email
-│   │   ├── Encryption/       # Serviço de criptografia AES-256
-│   │   └── Validation/       # Validadores (CPF, Telefone)
-│   └── Shared/               # Componentes compartilhados
-│       ├── Extensions/       # Extension methods
-│       ├── Middlewares/      # Global error handling
-│       ├── Seeds/            # Seeders iniciais
-│       ├── Upload/           # Serviço de upload de arquivos
-│       └── Exceptions/       # Exceções customizadas
-├── Program.cs                # Entry point e configuração
-├── appsettings.json          # Configurações da aplicação
-├── .env                      # Variáveis de ambiente (não commitado)
-└── .env.example              # Exemplo de variáveis de ambiente
+O Compose inicia a API em `http://localhost:5000` e publica o PostgreSQL na porta `5433` do host. Adicione também ao `.env`:
+
+```env
+DB_NAME=system_base
+DB_USER=postgres
+DB_PASSWORD=troque-a-senha
+HOST_POSTGRES_PATH=./postgres-data
+HOST_UPLOAD_PATH=./uploads
+HOST_LOG_PATH=./logs
 ```
 
-## 🔐 Endpoints da API
+```bash
+docker compose up -d --build
+docker compose logs -f aspnet-system-base
+docker compose down
+```
 
-### Autenticação
+O container da API depende do health check do PostgreSQL e possui seu próprio check em `/health`. O Swagger não é habilitado em produção. Veja outras opções em [DOCKER.md](DOCKER.md).
 
-#### Registrar Usuário
+## Endpoints atuais
+
+| Método | Rota | Autenticação | Rate limit | Descrição |
+|---|---|---|---|---|
+| `POST` | `/auth/sign-up` | Público | Sim | Cadastra usuário com role `user` |
+| `POST` | `/auth/login` | Público | Sim | Autentica e cria uma sessão |
+| `POST` | `/auth/refresh` | Cookie de refresh | Sim | Renova o access token |
+| `POST` | `/auth/logout` | Público | Sim | Revoga a sessão, se presente, e remove cookies |
+| `GET` | `/auth/validate` | Cookie de acesso | Não | Retorna o usuário autenticado |
+| `POST` | `/auth/forgot-password` | Público | Sim | Envia o link se a conta existir |
+| `POST` | `/auth/reset-password` | Público | Sim | Redefine a senha e revoga sessões |
+| `GET` | `/health` | Público | Não | Informa a disponibilidade da API |
+
+### Cadastro
+
 ```http
 POST /auth/sign-up
 Content-Type: application/json
 
 {
-  "name": "Nome do Usuário",
-  "email": "usuario@email.com",
-  "password": "senha123"
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "password": "senha-segura"
 }
 ```
 
-#### Login
+O nome aceita até 100 caracteres, o e-mail até 255 e a senha entre 5 e 100. E-mails são normalizados para minúsculas e não podem se repetir.
+
+### Login
+
 ```http
 POST /auth/login
 Content-Type: application/json
 
 {
-  "email": "usuario@email.com",
-  "password": "senha123"
+  "email": "maria@example.com",
+  "password": "senha-segura"
 }
 ```
 
-**Resposta**: Define cookies `access_token` e `refresh_token` (HttpOnly, Secure)
+Resposta resumida:
 
-#### Refresh Token
+```json
+{
+  "accessToken": "eyJ...",
+  "refreshToken": "eyJ...",
+  "expiresAt": "2026-08-20T15:00:00Z",
+  "userInfo": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "name": "Maria Silva",
+    "email": "maria@example.com",
+    "createdAt": "2026-08-20T14:45:00Z",
+    "roles": ["user"]
+  }
+}
+```
+
+Embora os tokens também apareçam na resposta atual, prefira os cookies HttpOnly no cliente web e não persista tokens em `localStorage`.
+
+### Renovar e validar a sessão
+
 ```http
 POST /auth/refresh
+Cookie: refresh_token=eyJ...
 ```
 
-**Resposta**: Novo access token em cookie
+A resposta informa `expiresAt`; o novo token é gravado no cookie `access_token`.
 
-#### Logout
 ```http
-POST /auth/logout
+GET /auth/validate
+Cookie: access_token=eyJ...
 ```
 
-#### Esqueci Senha
+Retorna `id`, `name`, `email` e `roles` do usuário autenticado.
+
+### Recuperar a senha
+
 ```http
 POST /auth/forgot-password
 Content-Type: application/json
 
 {
-  "email": "usuario@email.com"
+  "email": "maria@example.com"
 }
 ```
 
-#### Resetar Senha
+O endpoint sempre responde com mensagem genérica para não revelar se o e-mail existe.
+
 ```http
 POST /auth/reset-password
 Content-Type: application/json
 
 {
-  "token": "jwt-reset-token",
-  "newPassword": "novaSenha123"
+  "token": "token-recebido-no-link",
+  "newPassword": "nova-senha-segura"
 }
 ```
 
-### Usuários
+A senha precisa ter ao menos 5 caracteres. A alteração revoga todos os refresh tokens ativos do usuário.
 
-#### Criar Usuário (Requer permissão)
-```http
-POST /user/create
-Authorization: Bearer {access_token}
-Content-Type: application/json
+### Exemplo com curl
 
-{
-  "name": "Nome do Usuário",
-  "email": "usuario@email.com",
-  "password": "senha123",
-  "role": "user"
-}
+```bash
+curl -c cookies.txt -H 'Content-Type: application/json' \
+  -d '{"email":"maria@example.com","password":"senha-segura"}' \
+  http://localhost:4321/auth/login
+
+curl -b cookies.txt http://localhost:4321/auth/validate
+
+curl -b cookies.txt -c cookies.txt -X POST \
+  http://localhost:4321/auth/refresh
 ```
 
-## 👥 Roles e Permissões
+## Roles e permissões
 
-### Roles Disponíveis
-- `admin` - Acesso total
-- `manager` - Gerenciamento de usuários
-- `agent` - Acesso limitado
-- `user` - Acesso básico
+Os seeders criam `admin`, `manager`, `agent` e `user`. Atualmente:
 
-### Permissões
-O sistema usa permissões granulares no formato `{Action}{Subject}`:
-- `UserCreate` - Criar usuários
-- `UserRead` - Ler usuários
-- `UserUpdate` - Atualizar usuários
-- `UserDelete` - Deletar usuários
-- (e outras permissões configuráveis)
+- `admin`: `user.read`, `user.create`, `user.update`, `user.delete` e `user.manage`, além de bypass no handler.
+- `user`: `user.read`.
+- `manager` e `agent`: criadas sem permissões associadas.
 
-### Exemplo de Uso em Controllers
+Uso em novos endpoints:
 
 ```csharp
 [Authorize(Policy = Policies.UserCreate)]
-public async Task<IActionResult> CreateUser(CreateUserDto dto)
+[HttpPost]
+public IActionResult Create()
 {
-    // Apenas usuários com permissão UserCreate podem acessar
+    // Implementação da feature
 }
 ```
 
-## 🔄 Como Usar como Base para Outros Sistemas
+Uma fallback policy exige autenticação em todo endpoint novo. Use `[AllowAnonymous]` apenas quando o acesso realmente for público.
 
-Este projeto foi desenhado para ser facilmente adaptado como base para novos sistemas:
+## Componentes reutilizáveis
 
-### 1. Copie o Projeto
+### Upload
 
-```bash
-cp -r aspnet-system-base meu-novo-sistema
-cd meu-novo-sistema
+`IFileValidator` e `IFileUploadService` estão registrados na injeção de dependência. O limite é 10 MiB, com suporte a PDF, JPG/JPEG, PNG, GIF, WebP, DOC/DOCX, XLS/XLSX e TXT. O serviço gera nomes com UUID, salva, lê e apaga arquivos, e bloqueia caminhos absolutos e path traversal. Não há controller de upload nesta versão.
+
+### Validações
+
+Os atributos `[CpfValidation]` e `[PhoneValidation]` podem ser usados em novos DTOs; ainda não aparecem nos DTOs expostos.
+
+### Auditoria
+
+O interceptor cria registros para entidades adicionadas, alteradas ou removidas, incluindo entidade, ID, ação, valores anteriores/novos, usuário, data e IP. Não há endpoint de consulta dos logs.
+
+### Erros
+
+Erros de domínio seguem este formato:
+
+```json
+{
+  "statusCode": 409,
+  "message": "Email já existe."
+}
 ```
 
-### 2. Renomeie o Projeto
+Falhas de Data Annotations retornam HTTP 400 com uma lista de mensagens. Exceções não tratadas retornam HTTP 500 com mensagem genérica.
 
-Edite o arquivo `.csproj`:
-```xml
-<PropertyGroup>
-  <RootNamespace>MeuNovoSistema</RootNamespace>
-</PropertyGroup>
-```
+## Estrutura
 
-### 3. Adicione Novas Features
-
-Crie novas pastas em `Features/` seguindo o padrão existente:
-```
+```text
 Features/
-├── Produtos/          # Nova feature de produtos
-│   ├── ProdutosController.cs
-│   ├── ProdutosService.cs
-│   ├── dto/
-│   └── entities/
+├── Auth/                 # Controller, serviços, DTOs e refresh tokens
+├── User/                 # Entidade, DTOs e serviço de cadastro
+├── Roles/                # Roles
+├── Permissions/          # Policies e handler de autorização
+├── Relations/            # Usuário-role e role-permissão
+├── Audit/                # Interceptor e logs de auditoria
+├── Infrastructure/
+│   ├── Data/             # DbContext, mapeamentos e migrations
+│   ├── Email/            # Configurações de e-mail
+│   ├── Encryption/       # AES-256 e SHA-256
+│   ├── Jwt/              # Tokens
+│   ├── Scheduling/       # Base para tarefas agendadas
+│   └── Validation/       # CPF e telefone
+└── Shared/
+    ├── Exceptions/       # Exceções HTTP
+    ├── Extensions/       # Configuração e startup
+    ├── Middlewares/      # Tratamento de erros
+    ├── Seeds/            # Roles, permissões e admin
+    └── Upload/           # Armazenamento local
 ```
 
-### 4. Configure Novas Permissões
+## Logs
 
-Adicione permissões em `Features/Permissions/Permissions.cs` e configure as policies em `Features/Permissions/Policies.cs`.
+O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com retenção de 15 arquivos diários. O template inclui exceções em desenvolvimento.
 
-### 5. Execute Novas Migrations
+## Evoluindo a base
+
+1. Crie entidade, DTOs, serviço e controller em `Features/`.
+2. Registre o serviço em `AddApplicationServices`.
+3. Inclua policies em `Policies.AllPolicies` e associe-as em `Policies.RolePermissions`.
+4. Use `[Authorize(Policy = ...)]` nos endpoints.
+5. Gere e aplique a migration:
 
 ```bash
-dotnet ef migrations add AddProdutos
+dotnet ef migrations add NomeDaAlteracao
 dotnet ef database update
 ```
 
-### 6. Aproveite a Infraestrutura
-
-- **Autenticação**: Já configurada e funcionando
-- **Autorização**: Use `[Authorize(Policy = Policies.SuaPolicy)]`
-- **Audit**: Ações no banco são automaticamente auditadas
-- **Logging**: Logs configurados com Serilog
-- **Error Handling**: Middleware global de erros
-- **CORS**: Configure as origens no `.env`
-- **Upload de Arquivos**: Use `IFileUploadService` para uploads
-- **Criptografia**: Use `IEncryptionService` para criptografar dados sensíveis
-- **Email**: Use `EmailSettings` para envio de emails
-- **Validações**: Use `[CpfValidation]` e `[PhoneValidation]` atributos
-
-## 📝 Logging
-
-Os logs são salvos em `logs/log-{data}.txt` com retenção de 15 dias. O formato inclui timestamp, nível, contexto e mensagem.
-
-## 🔒 Segurança
-
-- Senhas hash com BCrypt (work factor 12)
-- Tokens JWT com assinatura HMAC-SHA256
-- Tokens de refresh token com hash SHA256
-- Cookies HttpOnly e Secure
-- Criptografia AES-256 para dados sensíveis
-- CORS configurável
-- Audit trail de todas as operações
-- Rate limiting (5 requisições por minuto por IP)
-- Validação de CPF e telefone
-
-## 🧪 Testes
-
-Para adicionar testes, crie um projeto de testes:
-
-```bash
-dotnet new xunit -n aspnet-system-base.Tests
-dotnet add aspnet-system-base.Tests/aspnet-system-base.Tests.csproj reference aspnet-system-base.csproj
-```
-
-## 📦 Dependências Principais
-
-- `Microsoft.AspNetCore.Authentication.JwtBearer` - Autenticação JWT
-- `Microsoft.EntityFrameworkCore` - ORM
-- `Npgsql.EntityFrameworkCore.PostgreSQL` - Provider PostgreSQL
-- `BCrypt.Net-Next` - Hash de senhas
-- `Serilog.AspNetCore` - Logging
-- `MailKit` - Envio de emails
-- `DotNetEnv` - Carregamento de .env
-- `Swashbuckle.AspNetCore` - Swagger
-
-## 🤝 Contribuindo
-
-Este é um projeto base. Para contribuir:
-1. Siga o padrão de estrutura em `Features/`
-2. Use injeção de dependência
-3. Implemente DTOs para entrada/saída
-4. Adicione validações apropriadas
-5. Documente novos endpoints no Swagger
-
-## 📄 Licença
-
-Este projeto serve como base para sistemas internos. Adapte conforme necessário.
-
-## 🆘 Suporte
-
-Para dúvidas ou problemas:
-- Verifique os logs em `logs/`
-- Confirme as configurações no `.env`
-- Valide a conexão com o banco de dados
-- Consulte a documentação Swagger em `/swagger`
+6. Adicione XML comments e `SwaggerOperation` para documentar os endpoints no Swagger.

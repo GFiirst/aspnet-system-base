@@ -188,16 +188,12 @@ public class AuthService : IAuthService
         _logger.LogInformation("Authentication succeeded");
 
         var decryptedEmail = _encryptionService.Decrypt(userExist.EmailEncrypted);
-        var decryptedCpf = _encryptionService.Decrypt(userExist.CpfEncrypted);
-        var decryptedPhone = _encryptionService.Decrypt(userExist.PhoneEncrypted);
 
         var userInfo = new UserResponseDto
         {
             Id = userExist.Id,
             Name = userExist.Name,
             Email = decryptedEmail,
-            Cpf = decryptedCpf,
-            Phone = decryptedPhone,
             CreatedAt = userExist.CreatedAt,
             Roles = userExist.UserRoles.Select(ur => ur.Role.Roles.ToString()).ToList()
         };

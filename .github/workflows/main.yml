@@ -1,0 +1,212 @@
+name: Deploy aspnet-system-base com Docker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aspnet-system-base-production
+  cancel-in-progress: true
+
+env:
+  DEPLOY_DIR: /root/aspnet-system-base
+  APP_DATA_DIR: /var/lib/aspnet-system-base
+  APP_LOG_DIR: /var/log/aspnet-system-base
+
+jobs:
+  pre-deploy:
+    name: Preparar servidor
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configurar SSH
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Instalar Docker e Docker Compose no servidor
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh -i ~/.ssh/github_actions "root@$SERVER_HOST" << 'EOF'
+            set -e
+
+            echo "Verificando Docker"
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "Instalando Docker"
+              curl -fsSL https://get.docker.com | bash -
+              systemctl start docker
+              systemctl enable docker
+            else
+              echo "Docker já instalado: $(docker --version)"
+            fi
+
+            echo "Verificando Docker Compose plugin"
+            if ! docker compose version >/dev/null 2>&1; then
+              echo "Instalando Docker Compose plugin"
+              mkdir -p /usr/local/lib/docker/cli-plugins
+              curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 \
+                -o /usr/local/lib/docker/cli-plugins/docker-compose
+              chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+            else
+              echo "Docker Compose já instalado: $(docker compose version)"
+            fi
+          EOF
+
+      - name: Preparar diretórios da aplicação
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh -i ~/.ssh/github_actions "root@$SERVER_HOST" << 'EOF'
+            set -e
+
+            if [ -f "${{ env.DEPLOY_DIR }}/docker-compose.yml" ]; then
+              cd "${{ env.DEPLOY_DIR }}"
+              docker compose down
+            else
+              docker stop aspnet-system-base system-base-postgres 2>/dev/null || true
+              docker rm aspnet-system-base system-base-postgres 2>/dev/null || true
+            fi
+
+            mkdir -p "${{ env.DEPLOY_DIR }}"
+            mkdir -p "${{ env.APP_DATA_DIR }}/uploads"
+            mkdir -p "${{ env.APP_DATA_DIR }}/postgres"
+            mkdir -p "${{ env.APP_LOG_DIR }}"
+          EOF
+
+  deploy:
+    name: Publicar aplicação
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+
+    steps:
+      - name: Configurar SSH
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Criar arquivo .env
+        shell: bash
+        env:
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_ACCESS_KEY: ${{ secrets.JWT_ACCESS_KEY }}
+          JWT_REFRESH_KEY: ${{ secrets.JWT_REFRESH_KEY }}
+          JWT_RESET_PASSWORD_KEY: ${{ secrets.JWT_RESET_PASSWORD_KEY }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWT_ACCESS_EXPIRATION_MINUTES: ${{ secrets.JWT_ACCESS_EXPIRATION_MINUTES }}
+          JWT_RESET_PASSWORD_EXPIRATION_MINUTES: ${{ secrets.JWT_RESET_PASSWORD_EXPIRATION_MINUTES }}
+          JWT_REFRESH_EXPIRATION_DAYS: ${{ secrets.JWT_REFRESH_EXPIRATION_DAYS }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          set -e
+          umask 077
+
+          required_secrets=(
+            DB_NAME
+            DB_USER
+            DB_PASSWORD
+            JWT_ACCESS_KEY
+            JWT_REFRESH_KEY
+            JWT_RESET_PASSWORD_KEY
+            ENCRYPTION_KEY
+          )
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::Secret obrigatório não configurado: $secret_name"
+              exit 1
+            fi
+          done
+
+          write_env() {
+            local key="$1"
+            local value="$2"
+            value="$(printf '%s' "$value" | sed "s/'/\\\\'/g")"
+            printf "%s='%s'\n" "$key" "$value"
+          }
+
+          {
+            write_env DB_NAME "$DB_NAME"
+            write_env DB_USER "$DB_USER"
+            write_env DB_PASSWORD "$DB_PASSWORD"
+            write_env Jwt__AccessKey "$JWT_ACCESS_KEY"
+            write_env Jwt__RefreshKey "$JWT_REFRESH_KEY"
+            write_env Jwt__ResetPasswordKey "$JWT_RESET_PASSWORD_KEY"
+            write_env Jwt__Issuer "$JWT_ISSUER"
+            write_env Jwt__Audience "$JWT_AUDIENCE"
+            write_env Jwt__AccessExpirationMinutes "$JWT_ACCESS_EXPIRATION_MINUTES"
+            write_env Jwt__ResetPasswordExpirationMinutes "$JWT_RESET_PASSWORD_EXPIRATION_MINUTES"
+            write_env Jwt__RefreshExpirationDays "$JWT_REFRESH_EXPIRATION_DAYS"
+            write_env Cors__AllowedOrigins "$CORS_ALLOWED_ORIGINS"
+            write_env FRONTEND_URL "$FRONTEND_URL"
+            write_env MAIL_USER "$MAIL_USER"
+            write_env MAIL_PASS "$MAIL_PASS"
+            write_env Encryption__Key "$ENCRYPTION_KEY"
+            write_env ADMIN_NAME "$ADMIN_NAME"
+            write_env ADMIN_EMAIL "$ADMIN_EMAIL"
+            write_env ADMIN_PASSWORD "$ADMIN_PASSWORD"
+            write_env HOST_UPLOAD_PATH "${{ env.APP_DATA_DIR }}/uploads"
+            write_env HOST_LOG_PATH "${{ env.APP_LOG_DIR }}"
+            write_env HOST_POSTGRES_PATH "${{ env.APP_DATA_DIR }}/postgres"
+            write_env FILE_PATH /app/uploads
+            write_env LOG_PATH /app/logs
+          } > .env
+
+      - name: Copiar projeto para o servidor
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          rsync -avz --delete \
+            --exclude='.git/' \
+            -e "ssh -i ~/.ssh/github_actions" \
+            ./ "root@$SERVER_HOST:${{ env.DEPLOY_DIR }}/"
+
+      - name: Iniciar containers Docker
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh -i ~/.ssh/github_actions "root@$SERVER_HOST" << 'EOF'
+            set -e
+            cd "${{ env.DEPLOY_DIR }}"
+
+            echo "Construindo e iniciando containers"
+            docker compose up -d --build
+
+            echo "Aguardando a API ficar saudável"
+            if ! timeout 120 bash -c 'until [ "$(docker inspect --format="{{.State.Health.Status}}" aspnet-system-base 2>/dev/null)" = "healthy" ]; do sleep 2; done'; then
+              echo "A API não ficou saudável dentro do tempo esperado"
+              docker compose logs --tail=100
+              exit 1
+            fi
+
+            docker compose ps
+            echo "Deploy finalizado"
+          EOF

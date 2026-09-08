@@ -29,11 +29,24 @@ builder.Host.UseSerilog();
 builder.Services.AddApiServices(builder.Configuration);
 
 var buildStopwatch = Stopwatch.StartNew();
+Log.Information("Construindo aplicação...");
 var app = builder.Build();
 buildStopwatch.Stop();
-Log.Information("Aplicação construída em {ElapsedMilliseconds}ms", buildStopwatch.ElapsedMilliseconds);
+Log.Information(
+    "Aplicação construída com sucesso em {ElapsedMilliseconds}ms",
+    buildStopwatch.ElapsedMilliseconds
+);
 
+var seedStopwatch = Stopwatch.StartNew();
+Log.Information("Iniciando seed do banco de dados...");
 await app.SeedDatabaseAsync();
+seedStopwatch.Stop();
+Log.Information(
+    "Seed do banco de dados concluído com sucesso em {ElapsedMilliseconds}ms",
+    seedStopwatch.ElapsedMilliseconds
+);
+
+app.UseSerilogRequestLogging();
 
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
 
@@ -42,7 +55,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 

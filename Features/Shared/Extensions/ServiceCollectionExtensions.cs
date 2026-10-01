@@ -218,14 +218,19 @@ public static class ServiceCollectionExtensions
     {
         services.AddRateLimiter(options =>
         {
-            options.AddFixedWindowLimiter("Default", limiterOptions =>
-            {
-                limiterOptions.PermitLimit = 5;
-                limiterOptions.Window = TimeSpan.FromMinutes(1);
-                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                limiterOptions.QueueLimit = 0;
-            });
-        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("Default", httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
         return services;

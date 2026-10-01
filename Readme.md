@@ -15,7 +15,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Refresh tokens armazenados somente como hash SHA-256.
 - Auditoria automática de inclusões, alterações e exclusões feitas pelo EF Core.
 - Roles e permissões sincronizadas no startup por seeders.
-- Rate limiting de 5 requisições por minuto nos endpoints anotados com a policy `Default`.
+- Rate limiting por IP de 5 requisições por minuto nos endpoints anotados com a policy `Default`.
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
 - Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone.
 

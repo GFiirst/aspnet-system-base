@@ -47,9 +47,10 @@ docker volume create logs 2>/dev/null
 echo "Starting container $CONTAINER_NAME..."
 docker run -d \
     --name $CONTAINER_NAME \
-    -p 5000:5000 \
+    -p 127.0.0.1:5000:5000 \
     -e ASPNETCORE_ENVIRONMENT=Production \
     -e ASPNETCORE_URLS=http://+:5000 \
+    -e ForwardedHeaders__KnownProxies="${FORWARDED_HEADERS_KNOWN_PROXIES}" \
     -e ConnectionStrings__DefaultConnection="${DB_CONNECTION_STRING}" \
     -e Jwt__AccessKey="${JWT_ACCESS_KEY}" \
     -e Jwt__RefreshKey="${JWT_REFRESH_KEY}" \

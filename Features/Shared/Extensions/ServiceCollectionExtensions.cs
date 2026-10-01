@@ -220,19 +220,36 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy("Default", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    partitionKey: GetRateLimitPartitionKey(httpContext),
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(2),
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        QueueLimit = 0,
-                        AutoReplenishment = true
-                    }));
+                        QueueLimit = 0
+                    }
+                )
+            );
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
         return services;
+    }
+
+    private static string GetRateLimitPartitionKey(HttpContext httpContext)
+    {
+        var ipAddress = httpContext.Connection.RemoteIpAddress;
+
+        if (ipAddress?.IsIPv4MappedToIPv6 == true)
+        {
+            ipAddress = ipAddress.MapToIPv4();
+        }
+
+        var clientIp = ipAddress?.ToString() ?? "unknown";
+        var method = httpContext.Request.Method;
+        var path = httpContext.Request.Path.Value?.ToLowerInvariant() ?? "/";
+
+        return $"{clientIp}:{method}:{path}";
     }
 }

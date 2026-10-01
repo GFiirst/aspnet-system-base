@@ -109,6 +109,7 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          FORWARDED_HEADERS_KNOWN_PROXIES: ${{ secrets.FORWARDED_HEADERS_KNOWN_PROXIES }}
           JWT_ACCESS_KEY: ${{ secrets.JWT_ACCESS_KEY }}
           JWT_REFRESH_KEY: ${{ secrets.JWT_REFRESH_KEY }}
           JWT_RESET_PASSWORD_KEY: ${{ secrets.JWT_RESET_PASSWORD_KEY }}
@@ -157,6 +158,7 @@ jobs:
             write_env DB_NAME "$DB_NAME"
             write_env DB_USER "$DB_USER"
             write_env DB_PASSWORD "$DB_PASSWORD"
+            write_env FORWARDED_HEADERS_KNOWN_PROXIES "$FORWARDED_HEADERS_KNOWN_PROXIES"
             write_env Jwt__AccessKey "$JWT_ACCESS_KEY"
             write_env Jwt__RefreshKey "$JWT_REFRESH_KEY"
             write_env Jwt__ResetPasswordKey "$JWT_RESET_PASSWORD_KEY"

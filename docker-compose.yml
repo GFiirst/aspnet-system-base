@@ -7,10 +7,11 @@ services:
       dockerfile: Dockerfile
     container_name: aspnet-system-base
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000
+      - ForwardedHeaders__KnownProxies=${FORWARDED_HEADERS_KNOWN_PROXIES}
 
       # Banco de dados
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}

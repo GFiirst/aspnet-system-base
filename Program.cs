@@ -1,7 +1,9 @@
 using DotNetEnv;
+using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using Serilog.Events;
 using System.Diagnostics;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,33 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddApiServices(builder.Configuration);
+var knownProxyAddresses = builder.Configuration["ForwardedHeaders:KnownProxies"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? [];
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+
+    foreach (var address in knownProxyAddresses)
+    {
+        if (!IPAddress.TryParse(address, out var proxyAddress))
+        {
+            throw new InvalidOperationException(
+                $"Endereço inválido em ForwardedHeaders:KnownProxies: '{address}'.");
+        }
+
+        options.KnownProxies.Add(proxyAddress);
+
+        if (proxyAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            options.KnownProxies.Add(proxyAddress.MapToIPv6());
+        }
+    }
+});
 
 var buildStopwatch = Stopwatch.StartNew();
 Log.Information("Construindo aplicação...");
@@ -45,6 +74,8 @@ Log.Information(
     "Seed do banco de dados concluído com sucesso em {ElapsedMilliseconds}ms",
     seedStopwatch.ElapsedMilliseconds
 );
+
+app.UseForwardedHeaders();
 
 app.UseSerilogRequestLogging();
 

@@ -147,16 +147,21 @@ public static class ServiceCollectionExtensions
         services.Configure<ApiBehaviorOptions>(options =>
         {
             options.InvalidModelStateResponseFactory = context =>
-        {
-            var errors = context.ModelState
-                .SelectMany(x => x.Value!.Errors)
-                .Select(e => !string.IsNullOrWhiteSpace(e.ErrorMessage)
-                    ? e.ErrorMessage
-                    : e.Exception?.Message)
-                .ToList();
+            {
+                var errors = context.ModelState
+                    .SelectMany(x => x.Value!.Errors)
+                    .Select(e => !string.IsNullOrWhiteSpace(e.ErrorMessage)
+                        ? e.ErrorMessage
+                        : e.Exception?.Message)
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .ToList();
 
-            return new BadRequestObjectResult(errors);
-        };
+                return new BadRequestObjectResult(new
+                {
+                    statusCode = StatusCodes.Status400BadRequest,
+                    message = string.Join(" ", errors)
+                });
+            };
         });
 
         return services;

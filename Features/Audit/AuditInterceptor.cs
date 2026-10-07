@@ -65,9 +65,13 @@ public class AuditInterceptor : SaveChangesInterceptor
 
         foreach (var entry in entries)
         {
+            var auditUserId = Guid.TryParse(userId, out var authenticatedUserId)
+                ? authenticatedUserId
+                : GetEntityUserId(entry);
+
             var auditLog = new AuditLog
             {
-                UserId = Guid.TryParse(userId, out var guid) ? guid : null,
+                UserId = auditUserId,
                 EntityName = entry.Entity.GetType().Name,
                 EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString() ?? "",
                 Action = entry.State switch
@@ -120,5 +124,20 @@ public class AuditInterceptor : SaveChangesInterceptor
 
             context.Set<AuditLog>().Add(auditLog);
         }
+    }
+
+    private static Guid? GetEntityUserId(
+        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        var userId = entry.Properties
+            .FirstOrDefault(property => property.Metadata.Name == "UserId")
+            ?.CurrentValue;
+
+        return userId switch
+        {
+            Guid value when value != Guid.Empty => value,
+            string value when Guid.TryParse(value, out var parsed) => parsed,
+            _ => null
+        };
     }
 }

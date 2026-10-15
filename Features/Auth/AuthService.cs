@@ -334,16 +334,42 @@ public class AuthService : IAuthService
         _logger.LogInformation("Password reset request started");
 
         var handler = new JwtSecurityTokenHandler();
-        var token = handler.ReadJwtToken(dto.Token);
+        ClaimsPrincipal principal;
 
-        var purposeClaim = token.Claims.FirstOrDefault(c => c.Type == "purpose")?.Value;
+        try
+        {
+            principal = handler.ValidateToken(
+                dto.Token,
+                new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = _jwt.Issuer,
+                    ValidAudience = _jwt.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(_jwt.ResetPasswordKey)),
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    ClockSkew = TimeSpan.Zero
+                },
+                out _);
+        }
+        catch (Exception ex) when (ex is SecurityTokenException or ArgumentException)
+        {
+            _logger.LogWarning(ex, "Invalid or expired token during password reset");
+            throw new UnauthorizedException("Token inválido ou expirado.");
+        }
+
+        var purposeClaim = principal.FindFirst("purpose")?.Value;
         if (purposeClaim != "password-reset")
         {
             _logger.LogWarning("Invalid token purpose during password reset");
             throw new UnauthorizedException("Token inválido.");
         }
 
-        var userIdString = token.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
+        var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         if (!Guid.TryParse(userIdString, out var userId))
         {
             _logger.LogWarning("Invalid user ID in token during password reset");

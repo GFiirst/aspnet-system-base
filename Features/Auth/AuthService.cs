@@ -143,6 +143,8 @@ public class AuthService : IAuthService
         }
 
         var accessToken = _tokenService.CreateToken(userExist);
+        var accessExpiresAt = DateTime.UtcNow.AddMinutes(_jwt.AccessExpirationMinutes);
+        var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwt.RefreshExpirationDays);
 
         var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -155,7 +157,7 @@ public class AuthService : IAuthService
             IpEncrypted = _encryptionService.Encrypt(ipAddress),
             IpHash = _encryptionService.ComputeHash(ipAddress),
             Device = DeviceHelper.ExtractDevice(userAgent),
-            ExpiredAt = DateTime.UtcNow.AddDays(30),
+            ExpiredAt = refreshExpiresAt,
         };
 
         var refreshToken = new JwtSecurityTokenHandler().WriteToken(
@@ -167,7 +169,7 @@ public class AuthService : IAuthService
                     new Claim(JwtRegisteredClaimNames.Sub, userExist.Id.ToString()),
                     new Claim("tokenId", refreshEntity.Id.ToString())
                 ],
-                expires: DateTime.UtcNow.AddDays(30),
+                expires: refreshExpiresAt,
                 signingCredentials: new SigningCredentials(
                     new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(_jwt.RefreshKey)
@@ -204,7 +206,7 @@ public class AuthService : IAuthService
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            ExpiresAt = accessExpiresAt,
             UserInfo = userInfo
         };
     }

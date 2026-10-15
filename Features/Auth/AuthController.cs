@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 
 /// <summary>Gerencia autenticação, sessão e recuperação de senha.</summary>
@@ -12,16 +13,19 @@ public class AuthController : ControllerBase
     private readonly IUserService _userService;
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
+    private readonly JwtSettings _jwt;
     public AuthController
     (
         IUserService userService,
         IAuthService authService,
-        IConfiguration configuration
+        IConfiguration configuration,
+        IOptions<JwtSettings> jwt
     )
     {
         _userService = userService;
         _authService = authService;
         _configuration = configuration;
+        _jwt = jwt.Value;
     }
 
     private bool GetSecureCookieSetting()
@@ -59,7 +63,7 @@ public class AuthController : ControllerBase
                 HttpOnly = true,
                 Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+                Expires = new DateTimeOffset(result.ExpiresAt)
             });
 
         Response.Cookies.Append(
@@ -70,7 +74,7 @@ public class AuthController : ControllerBase
                 HttpOnly = true,
                 Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
+                Expires = DateTimeOffset.UtcNow.AddDays(_jwt.RefreshExpirationDays)
             });
         return Ok(new ResponseLoginDto
         {
@@ -89,6 +93,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> RefreshToken()
     {
         var accessToken = await _authService.RefreshAsync(HttpContext);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwt.AccessExpirationMinutes);
 
         Response.Cookies.Append(
             "access_token",
@@ -98,12 +103,12 @@ public class AuthController : ControllerBase
                 HttpOnly = true,
                 Secure = GetSecureCookieSetting(),
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(15)
+                Expires = new DateTimeOffset(expiresAt)
             });
 
         var result = new RefreshResponseDto
         {
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15)
+            ExpiresAt = expiresAt
         };
 
         return Ok(result);

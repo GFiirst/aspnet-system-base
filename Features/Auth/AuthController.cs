@@ -72,7 +72,11 @@ public class AuthController : ControllerBase
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTimeOffset.UtcNow.AddDays(30)
             });
-        return Ok(result);
+        return Ok(new ResponseLoginDto
+        {
+            ExpiresAt = result.ExpiresAt,
+            UserInfo = result.UserInfo
+        });
     }
 
     [HttpPost("refresh")]

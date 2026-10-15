@@ -192,8 +192,6 @@ Resposta resumida:
 
 ```json
 {
-  "accessToken": "eyJ...",
-  "refreshToken": "eyJ...",
   "expiresAt": "2026-08-20T15:00:00Z",
   "userInfo": {
     "id": "00000000-0000-0000-0000-000000000000",
@@ -205,7 +203,7 @@ Resposta resumida:
 }
 ```
 
-Embora os tokens também apareçam na resposta atual, prefira os cookies HttpOnly no cliente web e não persista tokens em `localStorage`.
+Os tokens são enviados exclusivamente pelos cookies HttpOnly e não aparecem no corpo da resposta.
 
 ### Renovar e validar a sessão
 

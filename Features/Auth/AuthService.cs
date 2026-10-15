@@ -38,7 +38,7 @@ public class AuthService : IAuthService
         _encryptionService = encryptionService;
     }
 
-    public async Task<ResponseLoginDto> LoginAsync(LoginDto dto, HttpContext httpContext)
+    public async Task<LoginResult> LoginAsync(LoginDto dto, HttpContext httpContext)
     {   
         _logger.LogInformation("Authentication started");
 
@@ -200,7 +200,7 @@ public class AuthService : IAuthService
             Roles = userExist.UserRoles.Select(ur => ur.Role.Roles.ToString()).ToList()
         };
 
-        return new ResponseLoginDto
+        return new LoginResult
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,

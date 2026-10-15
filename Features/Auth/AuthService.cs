@@ -319,7 +319,7 @@ public class AuthService : IAuthService
             return;
         }
 
-        var token = GeneratePasswordResetToken(user.Id);
+        var token = GeneratePasswordResetToken(user);
 
         var resetLink = $"{_emailSettings.FrontendUrl}/reset-password?token={token}";
 
@@ -383,6 +383,17 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("Usuário não encontrado.");
         }
 
+        var passwordVersion = principal.FindFirst("password-version")?.Value;
+        var currentPasswordVersion = _encryptionService.ComputeHash(user.Password);
+
+        if (!FixedTimeHashEquals(passwordVersion, currentPasswordVersion))
+        {
+            _logger.LogWarning(
+                "Password reset token was already used or invalidated for user: {UserId}",
+                userId);
+            throw new UnauthorizedException("Token inválido ou já utilizado.");
+        }
+
         var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         user.Password = hashedPassword;
 
@@ -395,7 +406,18 @@ public class AuthService : IAuthService
             refreshToken.Status = TokenStatusEnum.revoked;
         }
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Concurrent reuse of password reset token detected for user: {UserId}",
+                userId);
+            throw new UnauthorizedException("Token inválido ou já utilizado.");
+        }
 
         _logger.LogInformation("Password reset completed for user: {UserId}", userId);
     }
@@ -428,18 +450,20 @@ public class AuthService : IAuthService
         };
     }
 
-    private string GeneratePasswordResetToken(Guid userId)
+    private string GeneratePasswordResetToken(User user)
     {
         var jti = Guid.NewGuid().ToString();
+        var passwordVersion = _encryptionService.ComputeHash(user.Password);
 
         var token = new JwtSecurityToken(
             issuer: _jwt.Issuer,
             audience: _jwt.Audience,
             claims: new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim("purpose", "password-reset"),
-                new Claim("jti", jti)
+                new Claim(JwtRegisteredClaimNames.Jti, jti),
+                new Claim("password-version", passwordVersion)
             },
             expires: DateTime.UtcNow.AddMinutes(_jwt.ResetPasswordExpirationMinutes),
             signingCredentials: new SigningCredentials(
@@ -449,6 +473,25 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static bool FixedTimeHashEquals(string? first, string second)
+    {
+        if (string.IsNullOrWhiteSpace(first))
+        {
+            return false;
+        }
+
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(
+                Convert.FromHexString(first),
+                Convert.FromHexString(second));
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     private async Task SendPasswordResetEmailAsync(string email, string resetLink)

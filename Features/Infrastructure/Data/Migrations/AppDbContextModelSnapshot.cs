@@ -245,6 +245,7 @@ namespace aspnet_autenticacao.Migrations
 
                     b.Property<string>("Password")
                         .IsRequired()
+                        .IsConcurrencyToken()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("password");

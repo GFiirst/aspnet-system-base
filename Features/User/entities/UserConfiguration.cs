@@ -28,6 +28,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(x => x.Password)
         .HasColumnName("password")
-        .HasMaxLength(255);
+        .HasMaxLength(255)
+        .IsConcurrencyToken();
     }
 }

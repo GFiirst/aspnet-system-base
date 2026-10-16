@@ -92,6 +92,13 @@ public static class ServiceCollectionExtensions
             options.UploadPath = configuration["FILE_PATH"] ?? "uploads";
         });
 
+        services.AddOptions<FileEncryptionOptions>()
+            .Bind(configuration.GetSection("FileEncryption"))
+            .Validate(
+                options => IsValidBase64Key(options.Kek, 32),
+                "FileEncryption:Kek deve ser uma chave de 32 bytes codificada em Base64.")
+            .ValidateOnStart();
+
         services.Configure<EmailSettings>(options =>
         {
             options.MailUser = configuration["MAIL_USER"] ?? "";
@@ -123,10 +130,23 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IFileValidator, FileValidator>();
         services.AddScoped<IFileUploadService, FileUploadService>();
+        services.AddSingleton<IFileEncryptionService, AesGcmFileEncryptionService>();
         services.AddScoped<IAuthorizationHandler, PermissionHandler>();
         services.AddScoped<AuditInterceptor>();
 
         return services;
+    }
+
+    private static bool IsValidBase64Key(string value, int expectedLength)
+    {
+        try
+        {
+            return Convert.FromBase64String(value).Length == expectedLength;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     public static IServiceCollection AddEncryptionService(

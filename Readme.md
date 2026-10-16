@@ -11,7 +11,8 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Renovação do access token, logout e validação da sessão.
 - Recuperação de senha por e-mail via Gmail SMTP.
 - Limite de cinco sessões ativas por usuário; a mais antiga é revogada ao exceder o limite.
-- Senhas com BCrypt; e-mails, IPs de sessão e IPs de auditoria criptografados com AES-256.
+- Senhas com BCrypt; e-mails, IPs de sessão e IPs de auditoria criptografados com AES-256-CBC.
+- Arquivos armazenados com envelope encryption: AES-256-GCM por arquivo e DEK protegida por uma KEK.
 - Refresh tokens armazenados somente como hash SHA-256.
 - Auditoria automática de inclusões, alterações e exclusões feitas pelo EF Core.
 - Roles e permissões sincronizadas no startup por seeders.
@@ -24,7 +25,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 
 - .NET 10, ASP.NET Core Web API e Entity Framework Core 10
 - PostgreSQL e Npgsql
-- JWT Bearer Authentication, BCrypt.Net, AES-256-CBC e SHA-256
+- JWT Bearer Authentication, BCrypt.Net, AES-256-CBC, AES-256-GCM e SHA-256
 - MailKit, Serilog, Swashbuckle/OpenAPI e DotNetEnv
 - xUnit, WebApplicationFactory, Testcontainers e Respawn
 - Docker e Docker Compose
@@ -71,6 +72,7 @@ Jwt__ResetPasswordExpirationMinutes=15
 Jwt__RefreshExpirationDays=30
 
 Encryption__Key=12345678901234567890123456789012
+FileEncryption__Kek=<chave-de-32-bytes-em-base64>
 Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
 APPLY_MIGRATIONS_ON_STARTUP=false
 
@@ -89,6 +91,7 @@ LOG_PATH=logs
 Pontos importantes:
 
 - `Encryption__Key` precisa ter exatamente 32 bytes em UTF-8. Trocá-la depois de gravar dados impede a descriptografia dos valores existentes.
+- `FileEncryption__Kek` precisa representar exatamente 32 bytes em Base64. Gere com `openssl rand -base64 32`; sua troca exige recriptografar os arquivos existentes.
 - Use chaves JWT longas, aleatórias, diferentes entre si e fora do controle de versão.
 - `MAIL_USER` e `MAIL_PASS` autenticam em `smtp.gmail.com:587` com STARTTLS. Para Gmail, use uma senha de app.
 - O e-mail usa o link `${FRONTEND_URL}/reset-password?token=...`.
@@ -172,7 +175,7 @@ O container da API depende do health check do PostgreSQL e possui seu próprio c
 
 ## Testes automatizados
 
-A suíte possui 17 testes de integração que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões e redefinição de senha.
+A suíte possui 23 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha e criptografia de arquivos.
 
 ```bash
 dotnet test Tests/AspnetSystemBase.Tests.csproj
@@ -334,7 +337,11 @@ Uma fallback policy exige autenticação em todo endpoint novo. Use `[AllowAnony
 
 ### Upload
 
-`IFileValidator` e `IFileUploadService` estão registrados na injeção de dependência. O limite é 10 MiB, com suporte a PDF, JPG/JPEG, PNG, GIF, WebP, DOC/DOCX, XLS/XLSX e TXT. O serviço gera nomes com UUID, salva, lê e apaga arquivos, e bloqueia caminhos absolutos e path traversal. Não há controller de upload nesta versão.
+`IFileValidator`, `IFileUploadService` e `IFileEncryptionService` estão registrados na injeção de dependência. O limite é 10 MiB, com suporte a PDF, JPG/JPEG, PNG, GIF, WebP, DOC/DOCX, XLS/XLSX e TXT. Não há controller nem rotas de arquivo nesta versão.
+
+Ao salvar, o serviço gera uma DEK aleatória de 32 bytes para o arquivo, criptografa o conteúdo com AES-256-GCM e protege a DEK com a KEK de `FileEncryption__Kek`. Nonces e tags de autenticação ficam no cabeçalho binário `SYSBENC1`; somente o conteúdo criptografado é persistido. Na leitura, qualquer alteração no cabeçalho ou conteúdo faz a autenticação falhar.
+
+O serviço também gera nomes com UUID, recupera o MIME type pela extensão, apaga arquivos e bloqueia caminhos absolutos e path traversal. Arquivos em texto puro ou protegidos por outra KEK não podem ser lidos por essa implementação.
 
 ### Validações
 
@@ -379,7 +386,7 @@ Features/
     ├── Extensions/       # Configuração e startup
     ├── Middlewares/      # Tratamento de erros
     ├── Seeds/            # Roles, permissões e admin
-    └── Upload/           # Armazenamento local
+    └── Upload/           # Armazenamento local e AES-256-GCM
 Tests/
 ├── Auth/                 # Cenários de autenticação e sessão
 ├── Infrastructure/       # Factory, banco descartável e helpers

@@ -35,6 +35,7 @@ Jwt__RefreshExpirationDays=30
 
 # Aplicação
 Encryption__Key=12345678901234567890123456789012
+FileEncryption__Kek=<chave-de-32-bytes-em-base64>
 Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
 FRONTEND_URL=http://localhost:3000
 APPLY_MIGRATIONS_ON_STARTUP=true
@@ -55,7 +56,13 @@ HOST_UPLOAD_PATH=./uploads
 HOST_LOG_PATH=./logs
 ```
 
-`Encryption__Key` deve possuir exatamente 32 bytes em UTF-8. As chaves JWT e credenciais não devem ser versionadas.
+`Encryption__Key` deve possuir exatamente 32 bytes em UTF-8. `FileEncryption__Kek` deve representar 32 bytes em Base64 e pode ser gerada com:
+
+```bash
+openssl rand -base64 32
+```
+
+As chaves JWT, a chave de dados e as credenciais não devem ser versionadas. Alterar `FileEncryption__Kek` sem recriptografar os arquivos torna o conteúdo existente ilegível.
 
 No container, a conexão com o banco é montada automaticamente pelo Compose usando o hostname `postgres`; a variável `ConnectionStrings__DefaultConnection` do `.env` é usada apenas na execução local fora do Compose.
 
@@ -140,6 +147,10 @@ As tabelas ainda não foram criadas. Confirme que `APPLY_MIGRATIONS_ON_STARTUP=t
 docker compose up -d --build
 docker compose logs -f aspnet-system-base
 ```
+
+### API falha ao validar `FileEncryption:Kek`
+
+Preencha `FileEncryption__Kek` no `.env` com uma chave Base64 que represente exatamente 32 bytes e recrie o container. A validação ocorre no startup mesmo que nenhuma rota de arquivo esteja exposta.
 
 ### Porta ocupada
 

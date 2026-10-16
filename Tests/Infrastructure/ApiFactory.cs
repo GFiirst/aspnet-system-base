@@ -22,6 +22,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private const string JwtResetPasswordKey =
         "system-base-tests-reset-key-0123456789abcdef0123456789abcdef";
 
+    private static readonly string FileEncryptionKek = Convert.ToBase64String(
+        Enumerable.Range(1, 32).Select(value => (byte)value).ToArray());
+
     private readonly string _temporaryPath = Path.Combine(
         Path.GetTempPath(),
         $"aspnet-system-base-tests-{Guid.NewGuid():N}");
@@ -49,6 +52,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["ConnectionStrings:DefaultConnection"] =
                     _postgres.GetConnectionString(),
                 ["Encryption:Key"] = EncryptionKey,
+                ["FileEncryption:Kek"] = FileEncryptionKek,
                 ["Jwt:AccessKey"] = JwtAccessKey,
                 ["Jwt:RefreshKey"] = JwtRefreshKey,
                 ["Jwt:ResetPasswordKey"] = JwtResetPasswordKey,

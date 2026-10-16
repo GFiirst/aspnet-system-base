@@ -39,6 +39,7 @@ services:
 
       # Criptografia
       - Encryption__Key=${Encryption__Key}
+      - FileEncryption__Kek=${FileEncryption__Kek}
 
       # Seed Admin
       - ADMIN_NAME=${ADMIN_NAME}

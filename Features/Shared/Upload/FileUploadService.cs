@@ -1,13 +1,18 @@
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 public class FileUploadService : IFileUploadService
 {
     private readonly FileUploadOptions _options;
+    private readonly IFileEncryptionService _fileEncryptionService;
 
-    public FileUploadService(IOptions<FileUploadOptions> options)
+    public FileUploadService(
+        IOptions<FileUploadOptions> options,
+        IFileEncryptionService fileEncryptionService)
     {
         _options = options.Value;
+        _fileEncryptionService = fileEncryptionService;
     }
 
     public async Task<FileUploadResult> SaveAsync(IFormFile file, string subdirectory)
@@ -16,20 +21,36 @@ public class FileUploadService : IFileUploadService
         
         Directory.CreateDirectory(uploadPath);
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var fileName = Guid.NewGuid() + extension;
 
         var fullPath = Path.Combine(uploadPath, fileName);
 
-        await using var stream = new FileStream(fullPath, FileMode.Create);
+        await using var plaintextStream = new MemoryStream();
+        await file.CopyToAsync(plaintextStream);
+        var plaintext = plaintextStream.ToArray();
 
-        await file.CopyToAsync(stream);
+        try
+        {
+            var encryptedFile = _fileEncryptionService.Encrypt(plaintext);
+            await File.WriteAllBytesAsync(fullPath, encryptedFile);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+        }
+
+        var provider = new FileExtensionContentTypeProvider();
+        var mimeType = provider.TryGetContentType(fileName, out var contentType)
+            ? contentType
+            : "application/octet-stream";
 
         return new FileUploadResult
         {
             OriginalName = file.FileName,
             FileName = fileName,
             RelativePath = Path.Combine(subdirectory, fileName),
-            MimeType = file.ContentType,
+            MimeType = mimeType,
             Size = file.Length
         };
     }
@@ -46,22 +67,25 @@ public class FileUploadService : IFileUploadService
         return Task.CompletedTask;
     }
 
-    public Task<(Stream Stream, string ContentType)> GetFileStreamAsync(string relativePath)
+    public async Task<(Stream Stream, string ContentType)> GetFileStreamAsync(
+        string relativePath)
     {
         var fullPath = GetSafePath(relativePath);
 
         if (!File.Exists(fullPath))
         {
-            throw new FileNotFoundException("Arquivo não encontrado.", fullPath);
+            throw new NotFoundException("Arquivo não encontrado.");
         }
 
         var provider = new FileExtensionContentTypeProvider();
         var contentType = provider.TryGetContentType(fullPath, out var detectedContentType)
             ? detectedContentType
             : "application/octet-stream";
-        Stream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var encryptedFile = await File.ReadAllBytesAsync(fullPath);
+        var plaintext = _fileEncryptionService.Decrypt(encryptedFile);
+        Stream stream = new MemoryStream(plaintext, writable: false);
 
-        return Task.FromResult((stream, contentType));
+        return (stream, contentType);
     }
 
     private string GetSafePath(string relativePath)

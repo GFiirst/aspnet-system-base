@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace aspnet_autenticacao.Migrations
+namespace aspnet_system_base.Features.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -244,8 +244,8 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnName("name");
 
                     b.Property<string>("Password")
-                        .IsRequired()
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("password");

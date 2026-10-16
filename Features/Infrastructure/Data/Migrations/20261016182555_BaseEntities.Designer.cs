@@ -8,10 +8,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace aspnet_autenticacao.Migrations
+namespace aspnet_system_base.Features.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260703210344_BaseEntities")]
+    [Migration("20261016182555_BaseEntities")]
     partial class BaseEntities
     {
         /// <inheritdoc />
@@ -43,12 +43,19 @@ namespace aspnet_autenticacao.Migrations
 
                     b.Property<string>("EntityName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("entity_name");
 
-                    b.Property<string>("IpAddress")
-                        .HasColumnType("text")
-                        .HasColumnName("ip_address");
+                    b.Property<string>("IpAddressEncrypted")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("ip_address_encrypted");
+
+                    b.Property<string>("IpAddressHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ip_address_hash");
 
                     b.Property<string>("NewValues")
                         .HasColumnType("text")
@@ -62,15 +69,13 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp");
 
-                    b.Property<string>("UserEmail")
-                        .HasColumnType("text")
-                        .HasColumnName("user_email");
-
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IpAddressHash");
 
                     b.ToTable("audit_logs", (string)null);
                 });
@@ -88,22 +93,10 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("action");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("subject");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -134,10 +127,15 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expired_at");
 
-                    b.Property<string>("Ip")
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)")
-                        .HasColumnName("ip");
+                    b.Property<string>("IpEncrypted")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("ip_encrypted");
+
+                    b.Property<string>("IpHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ip_hash");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -166,6 +164,8 @@ namespace aspnet_autenticacao.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IpHash");
+
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
@@ -181,23 +181,11 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
                     b.Property<string>("Roles")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("role");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -240,11 +228,17 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
-                    b.Property<string>("Email")
+                    b.Property<string>("EmailEncrypted")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("email");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("email_encrypted");
+
+                    b.Property<string>("EmailHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("email_hash");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -253,6 +247,7 @@ namespace aspnet_autenticacao.Migrations
                         .HasColumnName("name");
 
                     b.Property<string>("Password")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
@@ -264,7 +259,7 @@ namespace aspnet_autenticacao.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
+                    b.HasIndex("EmailHash")
                         .IsUnique()
                         .HasFilter("deleted_at IS NULL");
 

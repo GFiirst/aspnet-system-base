@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace aspnet_autenticacao.Migrations
+namespace aspnet_system_base.Features.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
     public partial class BaseEntities : Migration
@@ -17,14 +17,14 @@ namespace aspnet_autenticacao.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     user_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    user_email = table.Column<string>(type: "text", nullable: true),
-                    entity_name = table.Column<string>(type: "text", nullable: false),
+                    entity_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     entity_id = table.Column<string>(type: "text", nullable: false),
                     action = table.Column<string>(type: "text", nullable: false),
                     old_values = table.Column<string>(type: "text", nullable: true),
                     new_values = table.Column<string>(type: "text", nullable: true),
                     timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ip_address = table.Column<string>(type: "text", nullable: true)
+                    ip_address_encrypted = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ip_address_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -37,10 +37,7 @@ namespace aspnet_autenticacao.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     action = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    subject = table.Column<string>(type: "text", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    subject = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -52,10 +49,7 @@ namespace aspnet_autenticacao.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -68,7 +62,8 @@ namespace aspnet_autenticacao.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    email_encrypted = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    email_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     password = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -114,7 +109,8 @@ namespace aspnet_autenticacao.Migrations
                     status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     user_agent = table.Column<string>(type: "character varying(600)", maxLength: 600, nullable: true),
                     device = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    ip = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
+                    ip_encrypted = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ip_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -157,6 +153,16 @@ namespace aspnet_autenticacao.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_audit_logs_ip_address_hash",
+                table: "audit_logs",
+                column: "ip_address_hash");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_refresh_token_ip_hash",
+                table: "refresh_token",
+                column: "ip_hash");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_refresh_token_token_hash",
                 table: "refresh_token",
                 column: "token_hash",
@@ -173,9 +179,9 @@ namespace aspnet_autenticacao.Migrations
                 column: "role_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_email",
+                name: "IX_user_email_hash",
                 table: "user",
-                column: "email",
+                column: "email_hash",
                 unique: true,
                 filter: "deleted_at IS NULL");
 

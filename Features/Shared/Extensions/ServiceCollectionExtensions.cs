@@ -133,14 +133,24 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var encryptionKey = configuration["Encryption:Key"];
-        
-        if (string.IsNullOrEmpty(encryptionKey))
+        services.AddSingleton<IEncryptionService>(_ =>
         {
-            encryptionKey = "DefaultKeyForDesignTime32Chars!!";
-        }
+            var encryptionKey = configuration["Encryption:Key"];
 
-        services.AddSingleton<IEncryptionService>(new AesEncryptionService(encryptionKey));
+            if (string.IsNullOrWhiteSpace(encryptionKey))
+            {
+                throw new InvalidOperationException(
+                    "Encryption:Key é obrigatória e deve possuir exatamente 32 bytes em UTF-8.");
+            }
+
+            if (Encoding.UTF8.GetByteCount(encryptionKey) != 32)
+            {
+                throw new InvalidOperationException(
+                    "Encryption:Key deve possuir exatamente 32 bytes em UTF-8.");
+            }
+
+            return new AesEncryptionService(encryptionKey);
+        });
 
         return services;
     }
@@ -178,13 +188,13 @@ public static class ServiceCollectionExtensions
         services.Configure<JwtSettings>(
             configuration.GetSection("Jwt"));
 
-        var jwt = configuration
-            .GetSection("Jwt")
-            .Get<JwtSettings>()!;
-
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
+            var jwt = configuration
+                .GetSection("Jwt")
+                .Get<JwtSettings>()!;
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,

@@ -7,7 +7,11 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Env.Load();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    Env.Load();
+}
+
 builder.Configuration.AddEnvironmentVariables();
 
 var isDevelopment = builder.Environment.IsDevelopment();
@@ -99,3 +103,5 @@ app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();
+
+public partial class Program;

@@ -1,0 +1,125 @@
+Project ASPNET_SYSTEM_BASE {
+  database_type: 'PostgreSQL'
+  Note: 'Modelo atual da base de autenticação, autorização e auditoria. User e refresh_token derivam de BaseEntity e usam exclusão lógica por deleted_at. E-mails e endereços IP são persistidos de forma criptografada, com hashes separados para consulta.'
+}
+
+Enum permission_action {
+  manage
+  create
+  read
+  update
+  delete
+}
+
+Enum audit_action {
+  create
+  update
+  delete
+  read
+}
+
+Enum token_status {
+  active
+  revoked
+}
+
+Enum role_name {
+  admin
+  manager
+  agent
+  user
+}
+
+Table user {
+  id uuid [pk]
+  name varchar(100) [not null]
+  email_encrypted varchar(256) [not null, note: 'E-mail criptografado com AES-256-CBC']
+  email_hash varchar(64) [not null, note: 'SHA-256 do e-mail normalizado em minúsculas']
+  password varchar(255) [not null, note: 'Hash BCrypt e token de concorrência do EF Core']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+
+  indexes {
+    email_hash [unique, name: 'IX_user_email_hash', note: 'Índice parcial: deleted_at IS NULL']
+  }
+}
+
+Table roles {
+  id uuid [pk]
+  role role_name [not null, note: 'Valores sincronizados a partir de RolesEnum no startup']
+}
+
+Table user_role {
+  user_id uuid [not null, pk]
+  role_id uuid [not null, pk]
+  created_at timestamptz [not null]
+
+  indexes {
+    role_id [name: 'IX_user_role_role_id']
+  }
+}
+
+Table permissions {
+  id uuid [pk]
+  action permission_action [not null]
+  subject text [not null]
+
+  Note: 'Permissões atuais usam o subject user e as ações manage, create, read, update e delete.'
+}
+
+Table role_permission {
+  permission_id uuid [not null, pk]
+  role_id uuid [not null, pk]
+  created_at timestamptz [not null]
+
+  indexes {
+    role_id [name: 'IX_role_permission_role_id']
+  }
+}
+
+Table refresh_token {
+  id uuid [pk]
+  token_hash varchar(255) [not null, note: 'SHA-256 do JWT de refresh; o token original não é persistido']
+  expired_at timestamptz [not null]
+  status token_status [not null]
+  user_agent varchar(600)
+  device varchar(100)
+  ip_encrypted varchar(256)
+  ip_hash varchar(64)
+  user_id uuid [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  deleted_at timestamptz
+
+  indexes {
+    token_hash [unique, name: 'IX_refresh_token_token_hash']
+    ip_hash [name: 'IX_refresh_token_ip_hash']
+    user_id [name: 'IX_refresh_token_user_id']
+  }
+}
+
+Table audit_logs {
+  id uuid [pk]
+  user_id uuid [note: 'Identificador do usuário relacionado; pode ser nulo em eventos sem usuário']
+  entity_name varchar(255) [not null]
+  entity_id text [not null]
+  action audit_action [not null]
+  old_values text [note: 'Snapshot JSON com segredos removidos']
+  new_values text [note: 'Snapshot JSON com segredos removidos']
+  timestamp timestamptz [not null]
+  ip_address_encrypted varchar(256)
+  ip_address_hash varchar(64)
+
+  indexes {
+    ip_address_hash [name: 'IX_audit_logs_ip_address_hash']
+  }
+
+  Note: 'user_id é informativo e não possui foreign key na migration atual, preservando o histórico mesmo sem vínculo com user.'
+}
+
+Ref: user_role.user_id > user.id [delete: cascade]
+Ref: user_role.role_id > roles.id [delete: cascade]
+Ref: role_permission.permission_id > permissions.id [delete: cascade]
+Ref: role_permission.role_id > roles.id [delete: cascade]
+Ref: refresh_token.user_id > user.id [delete: cascade]

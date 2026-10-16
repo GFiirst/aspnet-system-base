@@ -191,6 +191,13 @@ Os testes usam `WebApplicationFactory` e iniciam um PostgreSQL 18 descartável c
 
 O ambiente `Testing` usa configurações isoladas em memória, diretórios temporários para logs/uploads e não carrega o `.env` local.
 
+## Documentação técnica
+
+- [Contrato OpenAPI](docs/openapi.yaml): rotas, cookies de autenticação, payloads e respostas da API atual.
+- [Diagrama do banco em DBML](docs/system-base.dbml): tabelas, índices, enums e relacionamentos da migration atual.
+
+O Swagger interativo gerado pela aplicação continua disponível em `/swagger` durante o desenvolvimento. O arquivo OpenAPI versionado serve como contrato revisável sem precisar iniciar a API.
+
 ## Endpoints atuais
 
 | Método | Rota | Autenticação | Rate limit | Descrição |
@@ -377,6 +384,9 @@ Tests/
 ├── Auth/                 # Cenários de autenticação e sessão
 ├── Infrastructure/       # Factory, banco descartável e helpers
 └── HealthTests.cs        # Health check da API
+docs/
+├── openapi.yaml          # Contrato HTTP versionado
+└── system-base.dbml      # Diagrama do banco de dados
 ```
 
 ## Logs

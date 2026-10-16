@@ -1,0 +1,478 @@
+openapi: 3.0.3
+info:
+  title: ASP.NET System Base API
+  version: 1.0.0
+  description: |
+    Contrato HTTP da implementação atual da base ASP.NET Core.
+
+    A autenticação usa os cookies HttpOnly `access_token` e `refresh_token`, ambos
+    com `SameSite=Strict`. Os JWTs não são retornados no corpo das respostas.
+    Clientes web devem enviar cookies nas requisições cross-origin.
+
+    Uma fallback policy exige autenticação por padrão. Os endpoints explicitamente
+    públicos estão marcados com `security: []`. Endpoints com a policy de rate limit
+    aceitam até 10 requisições por IP, método e rota em uma janela de 2 minutos.
+servers:
+  - url: http://localhost:4321
+    description: Desenvolvimento local (HTTP padrão)
+  - url: https://localhost:7038
+    description: Desenvolvimento local (HTTPS)
+  - url: http://localhost:5000
+    description: Docker Compose local
+tags:
+  - name: Autenticação
+    description: Cadastro, autenticação, sessões e recuperação de senha.
+  - name: Monitoramento
+    description: Disponibilidade da aplicação.
+paths:
+  /auth/sign-up:
+    post:
+      tags: [Autenticação]
+      summary: Registrar usuário
+      description: Cria um usuário e associa automaticamente a role `user`.
+      operationId: signUp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            example:
+              name: Maria Silva
+              email: maria@example.com
+              password: senha-segura
+      responses:
+        '200':
+          description: Usuário cadastrado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: O e-mail informado já está cadastrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                statusCode: 409
+                message: Email já existe.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      summary: Autenticar usuário
+      description: |
+        Inicia uma sessão, persiste somente o hash do refresh token e define os
+        cookies HttpOnly `access_token` e `refresh_token`. No máximo cinco sessões
+        permanecem ativas por usuário; ao exceder esse limite, a mais antiga é revogada.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: maria@example.com
+              password: senha-segura
+      responses:
+        '200':
+          description: Autenticação concluída e cookies definidos.
+          headers:
+            Set-Cookie:
+              description: Cookies HttpOnly `access_token` e `refresh_token` com `SameSite=Strict`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: E-mail ou senha inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                statusCode: 401
+                message: Email ou senha invalida
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags: [Autenticação]
+      summary: Renovar token de acesso
+      description: |
+        Valida assinatura, expiração, status e hash do cookie de refresh; em seguida,
+        define um novo cookie `access_token`. O refresh token não é rotacionado.
+      operationId: refreshAccessToken
+      security:
+        - refreshTokenCookie: []
+      responses:
+        '200':
+          description: Token de acesso renovado.
+          headers:
+            Set-Cookie:
+              description: Novo cookie HttpOnly `access_token`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags: [Autenticação]
+      summary: Encerrar sessão
+      description: Revoga o refresh token quando ele é válido e remove os dois cookies. A operação é idempotente.
+      operationId: logout
+      security: []
+      responses:
+        '200':
+          description: Sessão encerrada e cookies removidos.
+          headers:
+            Set-Cookie:
+              description: Instruções para expirar os cookies de sessão.
+              schema:
+                type: string
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/validate:
+    get:
+      tags: [Autenticação]
+      summary: Validar sessão autenticada
+      description: Valida o cookie de acesso e retorna o usuário atual com suas roles.
+      operationId: validateSession
+      security:
+        - accessTokenCookie: []
+      responses:
+        '200':
+          description: Sessão válida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/forgot-password:
+    post:
+      tags: [Autenticação]
+      summary: Solicitar recuperação de senha
+      description: Envia um link quando o e-mail existe. A resposta genérica evita revelar contas cadastradas.
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: maria@example.com
+      responses:
+        '200':
+          description: Solicitação processada, exista ou não uma conta para o e-mail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Se existir uma conta vinculada a este e-mail, uma mensagem de recuperação será enviada.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/reset-password:
+    post:
+      tags: [Autenticação]
+      summary: Redefinir senha
+      description: |
+        Redefine a senha com um token de recuperação. A troca invalida links emitidos
+        para a senha anterior e revoga todos os refresh tokens ativos do usuário.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              token: eyJhbGciOiJIUzI1NiJ9...
+              newPassword: nova-senha-segura
+      responses:
+        '200':
+          description: Senha redefinida com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Senha redefinida com sucesso.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Token de recuperação inválido, expirado ou já utilizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health:
+    get:
+      tags: [Monitoramento]
+      summary: Verificar disponibilidade da API
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: A aplicação está disponível.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Healthy
+        '503':
+          description: A aplicação ou uma dependência está indisponível.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unhealthy
+
+components:
+  securitySchemes:
+    accessTokenCookie:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: JWT de acesso gravado em cookie HttpOnly.
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: JWT de refresh gravado em cookie HttpOnly.
+
+  schemas:
+    CreateUserRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: Maria Silva
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: maria@example.com
+        password:
+          type: string
+          format: password
+          minLength: 5
+          maxLength: 100
+          writeOnly: true
+          example: senha-segura
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: maria@example.com
+        password:
+          type: string
+          format: password
+          maxLength: 255
+          writeOnly: true
+          example: senha-segura
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: maria@example.com
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Token recebido no link enviado por e-mail.
+        newPassword:
+          type: string
+          format: password
+          minLength: 5
+          maxLength: 255
+          writeOnly: true
+
+    UserResponse:
+      type: object
+      required: [id, name, email, createdAt, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3d21dbd7-558f-4cb5-83ce-a75475466a81
+        name:
+          type: string
+          example: Maria Silva
+        email:
+          type: string
+          format: email
+          example: maria@example.com
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-10-16T18:30:00Z'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+          example: [user]
+
+    LoginResponse:
+      type: object
+      required: [expiresAt, userInfo]
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-10-16T18:45:00Z'
+        userInfo:
+          $ref: '#/components/schemas/UserResponse'
+
+    RefreshResponse:
+      type: object
+      required: [expiresAt]
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-10-16T18:45:00Z'
+
+    ValidateResponse:
+      type: object
+      required: [id, name, email, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3d21dbd7-558f-4cb5-83ce-a75475466a81
+        name:
+          type: string
+          example: Maria Silva
+        email:
+          type: string
+          format: email
+          example: maria@example.com
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+          example: [user]
+
+    Role:
+      type: string
+      enum: [admin, manager, agent, user]
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+          format: int32
+          example: 401
+        message:
+          type: string
+          example: Não autorizado.
+
+    ValidationErrorResponse:
+      type: object
+      description: As mensagens das validações do corpo são concatenadas no campo `message`.
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+          format: int32
+          example: 400
+        message:
+          type: string
+          example: O email é obrigatorio
+
+  responses:
+    ValidationError:
+      description: Corpo da requisição inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    Unauthorized:
+      description: |
+        Cookie ausente, inválido, revogado ou expirado. Respostas produzidas diretamente
+        pelo middleware de autenticação podem não possuir corpo; falhas lançadas pela
+        aplicação usam o envelope `ErrorResponse`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Limite de 10 requisições a cada 2 minutos excedido.
+    InternalServerError:
+      description: Erro interno não tratado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

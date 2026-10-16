@@ -18,6 +18,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Rate limiting por IP, método e rota de 10 requisições a cada 2 minutos nos endpoints anotados com a policy `Default`.
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
 - Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone.
+- Suíte de integração para autenticação e health check com banco PostgreSQL descartável.
 
 ## Tecnologias
 
@@ -25,6 +26,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - PostgreSQL e Npgsql
 - JWT Bearer Authentication, BCrypt.Net, AES-256-CBC e SHA-256
 - MailKit, Serilog, Swashbuckle/OpenAPI e DotNetEnv
+- xUnit, WebApplicationFactory, Testcontainers e Respawn
 - Docker e Docker Compose
 
 ## Como a autenticação funciona
@@ -44,7 +46,7 @@ Em desenvolvimento, `CookieSettings:Secure` é `false` para permitir HTTP. Em pr
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - PostgreSQL
-- Docker com Compose, caso prefira containers
+- Docker ativo para os testes de integração; plugin Compose para executar toda a aplicação em containers
 
 ## Configuração local
 
@@ -101,7 +103,26 @@ dotnet tool restore
 dotnet ef database update
 ```
 
-Como alternativa, use `APPLY_MIGRATIONS_ON_STARTUP=true`. Os seeders de roles, permissões e admin sempre rodam no startup e são idempotentes.
+O banco precisa estar com as migrations aplicadas antes do primeiro `dotnet run`, pois os seeders consultam suas tabelas durante o startup. Como alternativa, use `APPLY_MIGRATIONS_ON_STARTUP=true`. Sem essa variável, ou com o valor `false`, a aplicação não aplica migrations automaticamente.
+
+Os seeders de roles, permissões e admin sempre rodam no startup e são idempotentes.
+
+### Migrations
+
+Para criar uma migration mantendo-a no diretório usado pelo projeto:
+
+```bash
+dotnet ef migrations add NomeDaAlteracao \
+  --output-dir Features/Infrastructure/Data/Migrations
+dotnet ef database update
+```
+
+Se as migrations forem consolidadas novamente em uma migration inicial, um banco de desenvolvimento que ainda tenha o histórico antigo deve ser recriado antes da aplicação da nova migration. O comando abaixo apaga todos os dados do banco configurado:
+
+```bash
+dotnet ef database drop --force
+dotnet ef database update
+```
 
 ## Execução
 
@@ -135,6 +156,7 @@ O Compose inicia a API em `http://localhost:5000` e publica o PostgreSQL na port
 DB_NAME=system_base
 DB_USER=postgres
 DB_PASSWORD=troque-a-senha
+FORWARDED_HEADERS_KNOWN_PROXIES=172.18.0.1
 HOST_POSTGRES_PATH=./postgres-data
 HOST_UPLOAD_PATH=./uploads
 HOST_LOG_PATH=./logs
@@ -147,6 +169,27 @@ docker compose down
 ```
 
 O container da API depende do health check do PostgreSQL e possui seu próprio check em `/health`. O Swagger não é habilitado em produção. Veja outras opções em [DOCKER.md](DOCKER.md).
+
+## Testes automatizados
+
+A suíte possui 17 testes de integração que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões e redefinição de senha.
+
+```bash
+dotnet test Tests/AspnetSystemBase.Tests.csproj
+```
+
+Para gerar cobertura com o collector já configurado:
+
+```bash
+dotnet test Tests/AspnetSystemBase.Tests.csproj \
+  --collect:"XPlat Code Coverage"
+```
+
+O relatório é gravado em `Tests/TestResults/`.
+
+Os testes usam `WebApplicationFactory` e iniciam um PostgreSQL 18 descartável com Testcontainers. Por isso, o Docker precisa estar ativo. As migrations e os seeders são executados no banco de teste, e o Respawn limpa os dados entre os cenários preservando as tabelas de configuração (`roles`, `permissions` e `role_permission`).
+
+O ambiente `Testing` usa configurações isoladas em memória, diretórios temporários para logs/uploads e não carrega o `.env` local.
 
 ## Endpoints atuais
 
@@ -305,7 +348,7 @@ Erros de domínio seguem este formato:
 }
 ```
 
-Falhas de Data Annotations retornam HTTP 400 com uma lista de mensagens. Exceções não tratadas retornam HTTP 500 com mensagem genérica.
+Falhas de Data Annotations retornam HTTP 400 no mesmo formato, com as mensagens de validação concatenadas no campo `message`. Exceções não tratadas retornam HTTP 500 com mensagem genérica.
 
 ## Estrutura
 
@@ -330,6 +373,10 @@ Features/
     ├── Middlewares/      # Tratamento de erros
     ├── Seeds/            # Roles, permissões e admin
     └── Upload/           # Armazenamento local
+Tests/
+├── Auth/                 # Cenários de autenticação e sessão
+├── Infrastructure/       # Factory, banco descartável e helpers
+└── HealthTests.cs        # Health check da API
 ```
 
 ## Logs
@@ -345,8 +392,10 @@ O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com
 5. Gere e aplique a migration:
 
 ```bash
-dotnet ef migrations add NomeDaAlteracao
+dotnet ef migrations add NomeDaAlteracao \
+  --output-dir Features/Infrastructure/Data/Migrations
 dotnet ef database update
 ```
 
-6. Adicione XML comments e `SwaggerOperation` para documentar os endpoints no Swagger.
+6. Adicione ou atualize testes em `Tests/`.
+7. Adicione XML comments e `SwaggerOperation` para documentar os endpoints no Swagger.

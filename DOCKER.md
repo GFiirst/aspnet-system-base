@@ -1,200 +1,170 @@
-# Docker Setup
+# Execução com Docker
 
-Este projeto inclui configurações Docker para rodar a aplicação .NET e o banco de dados PostgreSQL separadamente ou juntos via docker-compose.
+O projeto possui um `docker-compose.yml` que inicia a API e o PostgreSQL 18. Este é o fluxo recomendado para execução em containers.
 
 ## Pré-requisitos
 
-- Docker instalado
-- Docker Compose instalado (opcional, para orquestração)
-- Arquivo `.env` configurado com as variáveis de ambiente
+- Docker com o plugin Compose (`docker compose`)
+- Arquivo `.env` criado a partir do `.env.example`
 
-## Variáveis de Ambiente
+## Configuração
 
-Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+Crie o arquivo local:
+
+```bash
+cp .env.example .env
+```
+
+As principais variáveis usadas pelo Compose são:
 
 ```env
-# Database
-DB_USER=seu_usuario
-DB_PASSWORD=sua_senha
-DB_NAME=nome_do_banco
-DB_CONNECTION_STRING=Host=localhost;Port=5432;Database=nome_do_banco;Username=seu_usuario;Password=sua_senha
+# PostgreSQL
+DB_NAME=system_base
+DB_USER=postgres
+DB_PASSWORD=troque-a-senha
 
 # JWT
-JWT_ACCESS_KEY=sua_chave_access
-JWT_REFRESH_KEY=sua_chave_refresh
-JWT_ISSUER=AuthApi
-JWT_AUDIENCE=AuthApiUsers
-JWT_ACCESS_EXPIRATION_MINUTES=15
-JWT_REFRESH_EXPIRATION_DAYS=30
+Jwt__AccessKey=uma-chave-de-acesso-longa-e-segura
+Jwt__RefreshKey=uma-chave-de-refresh-longa-e-segura
+Jwt__ResetPasswordKey=uma-chave-de-reset-longa-e-segura
+Jwt__Issuer=AuthApi
+Jwt__Audience=AuthApiUsers
+Jwt__AccessExpirationMinutes=15
+Jwt__ResetPasswordExpirationMinutes=15
+Jwt__RefreshExpirationDays=30
 
-# CORS
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-
-# File Upload
-FILE_PATH=/app/uploads
-
-# Email
-MAIL_USER=seu_email
-MAIL_PASS=sua_senha
-
-# Frontend
-FRONTEND_URL=http://localhost:3000
-```
-
-## Opções de Execução
-
-### 1. Executar Separadamente
-
-#### Banco de Dados PostgreSQL
-
-```bash
-./run-db.sh
-```
-
-Este script:
-- Cria e inicia o container PostgreSQL 18
-- Configura volume para persistência de dados
-- Exibe a string de conexão
-
-#### Aplicação .NET
-
-```bash
-./run-app.sh
-```
-
-Este script:
-- Builda a imagem Docker da aplicação
-- Inicia o container na porta 5000
-- Configura volumes para uploads e logs
-- Carrega variáveis de ambiente do arquivo `.env`
-
-### 2. Executar com Docker Compose
-
-Para rodar ambos os containers juntos:
-
-```bash
-# Iniciar ambos os containers
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f
-
-# Parar containers
-docker-compose down
-
-# Parar e remover volumes. pfv evite esse
-docker-compose down -v
-```
-
-## Comandos Úteis
-
-### Verificar status dos containers
-
-```bash
-docker ps
-```
-
-### Ver logs de um container específico
-
-```bash
 # Aplicação
-docker logs -f aspnet-system-base
+Encryption__Key=12345678901234567890123456789012
+Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
+FRONTEND_URL=http://localhost:3000
+APPLY_MIGRATIONS_ON_STARTUP=true
+FORWARDED_HEADERS_KNOWN_PROXIES=172.18.0.1
 
-# Banco de dados
-docker logs -f system-base-postgres
+# E-mail
+MAIL_USER=
+MAIL_PASS=
+
+# Admin inicial opcional
+ADMIN_NAME=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+
+# Persistência no host
+HOST_POSTGRES_PATH=./postgres-data
+HOST_UPLOAD_PATH=./uploads
+HOST_LOG_PATH=./logs
 ```
 
-### Parar containers
+`Encryption__Key` deve possuir exatamente 32 bytes em UTF-8. As chaves JWT e credenciais não devem ser versionadas.
+
+No container, a conexão com o banco é montada automaticamente pelo Compose usando o hostname `postgres`; a variável `ConnectionStrings__DefaultConnection` do `.env` é usada apenas na execução local fora do Compose.
+
+## Iniciar e parar
 
 ```bash
-# Parar aplicação
-docker stop aspnet-system-base
-
-# Parar banco de dados
-docker stop system-base-postgres
+docker compose up -d --build
+docker compose ps
+docker compose logs -f aspnet-system-base
+docker compose down
 ```
 
-### Remover containers
+Para acompanhar também o banco:
 
 ```bash
-# Remover aplicação
-docker rm aspnet-system-base
-
-# Remover banco de dados
-docker rm system-base-postgres
+docker compose logs -f
 ```
 
-### Acessar o banco de dados
+O Compose publica:
+
+| Serviço | Endereço no host | Endereço entre containers |
+|---|---|---|
+| API | `http://localhost:5000` | `http://aspnet-system-base:5000` |
+| PostgreSQL | `localhost:5433` | `postgres:5432` |
+
+A API é vinculada somente a `127.0.0.1:5000`. Para exposição externa, use um proxy reverso e mantenha HTTPS na borda.
+
+## Migrations e seeders
+
+No Compose, `APPLY_MIGRATIONS_ON_STARTUP` usa `true` como padrão. A API aguarda o health check do PostgreSQL, aplica as migrations e então executa os seeders de roles, permissões e admin.
+
+Para aplicar uma migration manualmente a partir do host, use a string de conexão local apontando para a porta `5433`:
 
 ```bash
-docker exec -it system-base-postgres psql -U seu_usuario -d nome_do_banco
+dotnet ef database update \
+  --connection 'Host=localhost;Port=5433;Database=system_base;Username=postgres;Password=troque-a-senha'
 ```
 
-### Reconstruir a imagem da aplicação
+Normalmente isso não é necessário, pois a aplicação executa a inicialização ao subir.
+
+## Persistência
+
+O Compose utiliza bind mounts configuráveis:
+
+- `${HOST_POSTGRES_PATH:-./postgres-data}` → dados do PostgreSQL;
+- `${HOST_UPLOAD_PATH:-./uploads}` → arquivos enviados;
+- `${HOST_LOG_PATH:-./logs}` → logs da aplicação.
+
+`docker compose down` remove os containers e a rede, mas preserva esses diretórios. Como são bind mounts, `docker compose down -v` também não apaga os arquivos locais.
+
+## Health checks
+
+- API: `GET /health`, a cada 30 segundos no container.
+- PostgreSQL: `pg_isready`, a cada 10 segundos.
 
 ```bash
-docker build -t aspnet-system-base:latest .
-docker stop aspnet-system-base
-docker rm aspnet-system-base
-./run-app.sh
+docker inspect --format='{{.State.Health.Status}}' aspnet-system-base
+docker inspect --format='{{.State.Health.Status}}' system-base-postgres
 ```
 
-## Volumes
-
-Os seguintes volumes Docker são criados para persistência:
-
-- `postgres_data`: Dados do PostgreSQL
-- `uploads`: Arquivos enviados pela aplicação
-- `logs`: Logs da aplicação
-
-## Health Checks
-
-- **Aplicação**: Health check configurado em `/health` a cada 30s
-- **PostgreSQL**: Health check usando `pg_isready` a cada 10s
-
-## Portas
-
-- **Aplicação**: 5000
-- **PostgreSQL**: 5432
-
-## Troubleshooting
-
-### Container não inicia
-
-Verifique se as portas já estão em uso:
+## Acesso ao PostgreSQL
 
 ```bash
-# Verificar portas em uso
+docker compose exec postgres psql -U postgres -d system_base
+```
+
+Substitua usuário e banco pelos valores de `DB_USER` e `DB_NAME`.
+
+## Scripts auxiliares
+
+Os arquivos `run-db.sh` e `run-app.sh` iniciam containers separadamente e não usam a rede/configuração do Compose. O `run-app.sh` mantém nomes de variáveis legados, como `DB_CONNECTION_STRING`, `JWT_ACCESS_KEY` e `JWT_REFRESH_KEY`; por isso, prefira `docker compose` para obter a configuração completa atual.
+
+O `run-db.sh` publica o PostgreSQL em `localhost:5432`, enquanto o Compose utiliza `localhost:5433`.
+
+## Solução de problemas
+
+### API falha com `relation "roles" does not exist`
+
+As tabelas ainda não foram criadas. Confirme que `APPLY_MIGRATIONS_ON_STARTUP=true` e recrie a API:
+
+```bash
+docker compose up -d --build
+docker compose logs -f aspnet-system-base
+```
+
+### Porta ocupada
+
+```bash
 sudo lsof -i :5000
-sudo lsof -i :5432
+sudo lsof -i :5433
 ```
 
-### Erro de conexão com banco
+### Ver configuração recebida pelo container
 
-Certifique-se de que:
-1. O container PostgreSQL está rodando
-2. A string de conexão está correta no `.env`
-3. Os containers estão na mesma rede (se usando docker-compose)
-
-### Permissões negadas nos scripts
+O comando abaixo pode exibir segredos; use apenas em ambiente controlado:
 
 ```bash
-chmod +x run-app.sh run-db.sh
+docker compose exec aspnet-system-base env
 ```
 
-### Verificar variáveis de ambiente no container
+### Recriar o banco de desenvolvimento
 
-```bash
-docker exec aspnet-system-base env
-```
+Pare os containers e remova explicitamente o diretório definido em `HOST_POSTGRES_PATH`. Essa operação apaga todos os dados e deve ser usada somente em um banco descartável.
 
 ## Produção
 
-Para produção, considere:
-
-1. Usar secrets do Docker Swarm ou Kubernetes para variáveis sensíveis
-2. Configurar backup automático do volume `postgres_data`
-3. Usar imagem específica de PostgreSQL (ex: `postgres:18.4` em vez de `postgres:18`)
-4. Configurar resource limits no docker-compose
-5. Usar HTTPS reverso proxy (nginx/traefik)
-6. Configurar monitoramento e alertas
+- Use um gerenciador de secrets em vez de armazenar credenciais no `.env`.
+- Fixe versões das imagens e mantenha .NET/PostgreSQL atualizados.
+- Configure backup do diretório de dados do PostgreSQL.
+- Use proxy reverso com HTTPS e configure `ForwardedHeaders__KnownProxies` para o endereço real do proxy.
+- Defina limites de CPU/memória, monitoramento e alertas.
+- Avalie aplicar migrations em uma etapa controlada do deploy em vez do startup.

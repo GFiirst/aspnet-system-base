@@ -67,6 +67,10 @@ dotnet test Tests/AspnetSystemBase.Tests.csproj \
 dotnet test Tests/AspnetSystemBase.Tests.csproj \
   --filter "FullyQualifiedName~Upload"
 
+# Auditoria e sanitização de dados sensíveis
+dotnet test Tests/AspnetSystemBase.Tests.csproj \
+  --filter "FullyQualifiedName~Audit"
+
 # Um método específico
 dotnet test Tests/AspnetSystemBase.Tests.csproj \
   --filter "FullyQualifiedName~Validador_deve_rejeitar_pdf_sem_assinatura_real"
@@ -83,7 +87,8 @@ Validam componentes isolados sem iniciar a aplicação ou o banco. A cobertura a
 - validação conjunta de extensão, MIME e assinatura real de arquivos;
 - estrutura mínima de documentos Open XML;
 - rejeição de conteúdo binário disfarçado de texto;
-- proteção contra path traversal no armazenamento.
+- proteção contra path traversal no armazenamento;
+- sanitização recursiva de senhas, tokens, segredos, credenciais, hashes e valores criptografados em JSON.
 
 ### Testes de integração
 
@@ -115,6 +120,7 @@ Como o rate limit permanece em memória durante a vida da `ApiFactory`, evite co
 | Health | Inicialização e resposta do health check |
 | Autenticação | Login, cookies, refresh, logout, recuperação de senha, revogação, limite de sessões e rate limit |
 | Arquivos | Validação do conteúdo, criptografia em repouso, leitura, adulteração e path traversal |
+| Auditoria | Sanitização isolada e persistência de logs sem dados sensíveis |
 
 ## VS Code
 

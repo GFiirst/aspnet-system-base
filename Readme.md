@@ -14,7 +14,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Senhas com BCrypt; e-mails, IPs de sessão e IPs de auditoria criptografados com AES-256-CBC.
 - Arquivos armazenados com envelope encryption: AES-256-GCM por arquivo e DEK protegida por uma KEK.
 - Refresh tokens armazenados somente como hash SHA-256.
-- Auditoria automática de inclusões, alterações e exclusões feitas pelo EF Core.
+- Auditoria automática de inclusões, alterações e exclusões feitas pelo EF Core, com sanitização de senhas, tokens, segredos, credenciais, hashes e valores criptografados.
 - Roles e permissões sincronizadas no startup por seeders.
 - Rate limiting por IP, método e rota de 10 requisições a cada 2 minutos nos endpoints anotados com a policy `Default`.
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
@@ -175,7 +175,7 @@ O container da API depende do health check do PostgreSQL e possui seu próprio c
 
 ## Testes automatizados
 
-A suíte possui 30 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia e segurança de arquivos.
+A suíte possui 43 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia, segurança de arquivos e sanitização da auditoria.
 
 ```bash
 dotnet test Tests/AspnetSystemBase.Tests.csproj
@@ -385,7 +385,7 @@ Features/
 ├── Roles/                # Roles
 ├── Permissions/          # Policies e handler de autorização
 ├── Relations/            # Usuário-role e role-permissão
-├── Audit/                # Interceptor e logs de auditoria
+├── Audit/                # Interceptor, logs e sanitização da auditoria
 ├── Infrastructure/
 │   ├── Data/             # DbContext, mapeamentos e migrations
 │   ├── Email/            # Configurações de e-mail

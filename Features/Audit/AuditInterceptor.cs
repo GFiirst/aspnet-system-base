@@ -6,25 +6,6 @@ using System.IdentityModel.Tokens.Jwt;
 
 public class AuditInterceptor : SaveChangesInterceptor
 {
-    private const string RedactedValue = "[REDACTED]";
-    private const string SecretChangedValue = "[SECRET_CHANGED]";
-
-    private static readonly HashSet<string> SecretPropertyNames = new(
-        StringComparer.OrdinalIgnoreCase)
-    {
-        "Password",
-        "TokenHash",
-        "Auth",
-        "P256dh"
-    };
-
-    private static readonly HashSet<string> SensitivePropertyNames = new(
-        StringComparer.OrdinalIgnoreCase)
-    {
-        "Endpoint",
-        "UserAgent"
-    };
-
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     private readonly ILogger<AuditInterceptor> _logger;
@@ -114,10 +95,10 @@ public class AuditInterceptor : SaveChangesInterceptor
                 {
                     if (property.IsModified)
                     {
-                        oldValues[property.Metadata.Name] = GetAuditValue(
+                        oldValues[property.Metadata.Name] = AuditValueSanitizer.SanitizeValue(
                             property.Metadata.Name,
                             property.OriginalValue);
-                        newValues[property.Metadata.Name] = GetAuditValue(
+                        newValues[property.Metadata.Name] = AuditValueSanitizer.SanitizeValue(
                             property.Metadata.Name,
                             property.CurrentValue);
                     }
@@ -131,7 +112,7 @@ public class AuditInterceptor : SaveChangesInterceptor
                 var newValues = new Dictionary<string, object?>();
                 foreach (var property in entry.Properties)
                 {
-                    newValues[property.Metadata.Name] = GetAuditValue(
+                    newValues[property.Metadata.Name] = AuditValueSanitizer.SanitizeValue(
                         property.Metadata.Name,
                         property.CurrentValue);
                 }
@@ -142,7 +123,7 @@ public class AuditInterceptor : SaveChangesInterceptor
                 var oldValues = new Dictionary<string, object?>();
                 foreach (var property in entry.Properties)
                 {
-                    oldValues[property.Metadata.Name] = GetAuditValue(
+                    oldValues[property.Metadata.Name] = AuditValueSanitizer.SanitizeValue(
                         property.Metadata.Name,
                         property.OriginalValue);
                 }
@@ -151,23 +132,6 @@ public class AuditInterceptor : SaveChangesInterceptor
 
             context.Set<AuditLog>().Add(auditLog);
         }
-    }
-
-    private static object? GetAuditValue(string propertyName, object? value)
-    {
-        if (SecretPropertyNames.Contains(propertyName))
-        {
-            return SecretChangedValue;
-        }
-
-        if (SensitivePropertyNames.Contains(propertyName)
-            || propertyName.EndsWith("Encrypted", StringComparison.OrdinalIgnoreCase)
-            || propertyName.EndsWith("Hash", StringComparison.OrdinalIgnoreCase))
-        {
-            return RedactedValue;
-        }
-
-        return value;
     }
 
     private static Guid? GetEntityUserId(

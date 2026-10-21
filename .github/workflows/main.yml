@@ -1,6 +1,9 @@
 name: Deploy aspnet-system-base com Docker
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -10,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-aspnet-system-base-production
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -19,9 +22,51 @@ env:
   APP_LOG_DIR: /var/log/aspnet-system-base
 
 jobs:
+  tests:
+    name: Executar testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar dependências
+        run: dotnet restore Tests/AspnetSystemBase.Tests.csproj
+
+      - name: Compilar
+        run: >
+          dotnet build Tests/AspnetSystemBase.Tests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Executar testes
+        run: >
+          dotnet test Tests/AspnetSystemBase.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Publicar resultado dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/
+          if-no-files-found: ignore
+          retention-days: 14
+
   pre-deploy:
     name: Preparar servidor
     runs-on: ubuntu-latest
+    needs: tests
+    if: github.event_name != 'pull_request'
 
     steps:
       - name: Configurar SSH

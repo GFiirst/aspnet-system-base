@@ -18,7 +18,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Roles e permissões sincronizadas no startup por seeders.
 - Rate limiting por IP, método e rota de 10 requisições a cada 2 minutos nos endpoints anotados com a policy `Default`.
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
-- Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone.
+- Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone. A validação confere tamanho, extensão, MIME e assinatura/estrutura real do conteúdo antes do armazenamento.
 - Suíte de integração para autenticação e health check com banco PostgreSQL descartável.
 
 ## Tecnologias
@@ -175,7 +175,7 @@ O container da API depende do health check do PostgreSQL e possui seu próprio c
 
 ## Testes automatizados
 
-A suíte possui 23 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha e criptografia de arquivos.
+A suíte possui 30 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia e segurança de arquivos.
 
 ```bash
 dotnet test Tests/AspnetSystemBase.Tests.csproj
@@ -194,10 +194,22 @@ Os testes usam `WebApplicationFactory` e iniciam um PostgreSQL 18 descartável c
 
 O ambiente `Testing` usa configurações isoladas em memória, diretórios temporários para logs/uploads e não carrega o `.env` local.
 
+Testes unitários não precisam do Docker e podem ser executados separadamente:
+
+```bash
+dotnet test Tests/AspnetSystemBase.Tests.csproj \
+  --filter "FullyQualifiedName~Unit"
+```
+
+O workflow de CI compila e executa toda a suíte em pull requests e pushes para `main`. O deploy só é liberado depois dos testes, e o resultado TRX fica disponível como artifact por 14 dias.
+
+Consulte [TESTS.md](TESTS.md) para conhecer a arquitetura da suíte, filtros, cobertura, isolamento e solução de problemas.
+
 ## Documentação técnica
 
 - [Contrato OpenAPI](docs/openapi.yaml): rotas, cookies de autenticação, payloads e respostas da API atual.
 - [Diagrama do banco em DBML](docs/system-base.dbml): tabelas, índices, enums e relacionamentos da migration atual.
+- [Guia de testes](TESTS.md): execução, organização, cobertura e infraestrutura dos testes automatizados.
 
 O Swagger interativo gerado pela aplicação continua disponível em `/swagger` durante o desenvolvimento. O arquivo OpenAPI versionado serve como contrato revisável sem precisar iniciar a API.
 

@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
-namespace AspnetSystemBase.Tests.Upload;
+namespace AspnetSystemBase.Tests.Unit.Upload;
 
 public sealed class FileEncryptionTests
 {

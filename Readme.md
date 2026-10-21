@@ -18,6 +18,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Roles e permissões sincronizadas no startup por seeders.
 - Rate limiting por IP, método e rota de 10 requisições a cada 2 minutos nos endpoints anotados com a policy `Default`.
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
+- Observabilidade opcional com traces, métricas e logs estruturados exportados por OTLP.
 - Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone. A validação confere tamanho, extensão, MIME e assinatura/estrutura real do conteúdo antes do armazenamento.
 - Suíte de integração para autenticação e health check com banco PostgreSQL descartável.
 
@@ -26,7 +27,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - .NET 10, ASP.NET Core Web API e Entity Framework Core 10
 - PostgreSQL e Npgsql
 - JWT Bearer Authentication, BCrypt.Net, AES-256-CBC, AES-256-GCM e SHA-256
-- MailKit, Serilog, Swashbuckle/OpenAPI e DotNetEnv
+- MailKit, Serilog, OpenTelemetry, Swashbuckle/OpenAPI e DotNetEnv
 - xUnit, WebApplicationFactory, Testcontainers e Respawn
 - Docker e Docker Compose
 
@@ -86,6 +87,11 @@ ADMIN_PASSWORD=
 
 FILE_PATH=uploads
 LOG_PATH=logs
+
+OpenTelemetry__Enabled=false
+OpenTelemetry__ServiceName=aspnet-system-base
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 ```
 
 Pontos importantes:
@@ -97,6 +103,7 @@ Pontos importantes:
 - O e-mail usa o link `${FRONTEND_URL}/reset-password?token=...`.
 - O admin inicial só é criado quando as três variáveis `ADMIN_*` estão preenchidas.
 - Se `Cors__AllowedOrigins` ficar vazio, a API aceita qualquer origem, sem credenciais.
+- `OpenTelemetry__Enabled=true` ativa traces, métricas e logs via OTLP. Mantenha desativado quando não houver um collector ou backend compatível disponível.
 
 Restaure dependências e aplique as migrations:
 
@@ -175,7 +182,7 @@ O container da API depende do health check do PostgreSQL e possui seu próprio c
 
 ## Testes automatizados
 
-A suíte possui 43 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia, segurança de arquivos e sanitização da auditoria.
+A suíte possui 46 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia, segurança de arquivos, sanitização da auditoria e configuração do OpenTelemetry.
 
 ```bash
 dotnet test Tests/AspnetSystemBase.Tests.csproj
@@ -391,6 +398,7 @@ Features/
 │   ├── Email/            # Configurações de e-mail
 │   ├── Encryption/       # AES-256 e SHA-256
 │   ├── Jwt/              # Tokens
+│   ├── Observability/    # OpenTelemetry e exportação OTLP
 │   ├── Scheduling/       # Base para tarefas agendadas
 │   └── Validation/       # CPF e telefone
 └── Shared/
@@ -402,6 +410,7 @@ Features/
 Tests/
 ├── Auth/                 # Cenários de autenticação e sessão
 ├── Infrastructure/       # Factory, banco descartável e helpers
+├── Observability/        # Registro condicional do OpenTelemetry
 └── HealthTests.cs        # Health check da API
 docs/
 ├── openapi.yaml          # Contrato HTTP versionado
@@ -410,9 +419,31 @@ docs/
 
 ## Logs
 
-O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com retenção de 15 arquivos diários. O template inclui data, hora, fuso e stack trace das exceções também em produção para diagnóstico interno.
+O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com retenção de 15 arquivos diários. Quando o OpenTelemetry está habilitado, os mesmos eventos estruturados também são exportados por OTLP. O template inclui data, hora, fuso, `TraceId`, `SpanId` e stack trace das exceções também em produção para diagnóstico interno.
 
 Dados pessoais e segredos não devem ser incluídos nos eventos. Os fluxos de autenticação registram apenas identificadores internos, como `UserId`, e nunca o e-mail informado, tokens ou senhas. Novos logs devem seguir o mesmo padrão.
+
+## OpenTelemetry
+
+Quando `OpenTelemetry__Enabled=true`, a API exporta por OTLP:
+
+- traces de requisições ASP.NET Core, clientes HTTP e comandos PostgreSQL;
+- métricas de ASP.NET Core, clientes HTTP, PostgreSQL e runtime .NET;
+- logs estruturados do Serilog, incluindo nível, propriedades e exceções;
+- atributos de recurso com nome, versão, instância e ambiente da aplicação.
+
+Configure um OpenTelemetry Collector ou backend compatível:
+
+```env
+OpenTelemetry__Enabled=true
+OpenTelemetry__ServiceName=aspnet-system-base
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+# Opcional para provedores autenticados:
+OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer%20SEU_TOKEN
+```
+
+Os protocolos aceitos são `grpc` e `http/protobuf`. O endpoint `/health` é omitido dos traces para reduzir ruído, mas continua participando das métricas HTTP. `TraceId` e `SpanId` acompanham os logs produzidos durante uma requisição para permitir correlação no backend de observabilidade.
 
 ## Evoluindo a base
 

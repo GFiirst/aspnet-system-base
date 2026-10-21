@@ -171,6 +171,11 @@ jobs:
           ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          OTEL_ENABLED: ${{ secrets.OTEL_ENABLED || vars.OTEL_ENABLED }}
+          OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME || vars.OTEL_SERVICE_NAME }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT || vars.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_PROTOCOL: ${{ secrets.OTEL_EXPORTER_OTLP_PROTOCOL || vars.OTEL_EXPORTER_OTLP_PROTOCOL }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         run: |
           set -e
           umask 077
@@ -220,6 +225,11 @@ jobs:
             write_env ADMIN_NAME "$ADMIN_NAME"
             write_env ADMIN_EMAIL "$ADMIN_EMAIL"
             write_env ADMIN_PASSWORD "$ADMIN_PASSWORD"
+            write_env OTEL_ENABLED "${OTEL_ENABLED:-false}"
+            write_env OTEL_SERVICE_NAME "${OTEL_SERVICE_NAME:-aspnet-system-base}"
+            write_env OTEL_EXPORTER_OTLP_ENDPOINT "$OTEL_EXPORTER_OTLP_ENDPOINT"
+            write_env OTEL_EXPORTER_OTLP_PROTOCOL "${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}"
+            write_env OTEL_EXPORTER_OTLP_HEADERS "$OTEL_EXPORTER_OTLP_HEADERS"
             write_env HOST_UPLOAD_PATH "${{ env.APP_DATA_DIR }}/uploads"
             write_env HOST_LOG_PATH "${{ env.APP_LOG_DIR }}"
             write_env HOST_POSTGRES_PATH "${{ env.APP_DATA_DIR }}/postgres"

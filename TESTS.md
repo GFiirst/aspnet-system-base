@@ -71,6 +71,10 @@ dotnet test Tests/AspnetSystemBase.Tests.csproj \
 dotnet test Tests/AspnetSystemBase.Tests.csproj \
   --filter "FullyQualifiedName~Audit"
 
+# Registro do OpenTelemetry
+dotnet test Tests/AspnetSystemBase.Tests.csproj \
+  --filter "FullyQualifiedName~Observability"
+
 # Um método específico
 dotnet test Tests/AspnetSystemBase.Tests.csproj \
   --filter "FullyQualifiedName~Validador_deve_rejeitar_pdf_sem_assinatura_real"
@@ -88,7 +92,8 @@ Validam componentes isolados sem iniciar a aplicação ou o banco. A cobertura a
 - estrutura mínima de documentos Open XML;
 - rejeição de conteúdo binário disfarçado de texto;
 - proteção contra path traversal no armazenamento;
-- sanitização recursiva de senhas, tokens, segredos, credenciais, hashes e valores criptografados em JSON.
+- sanitização recursiva de senhas, tokens, segredos, credenciais, hashes e valores criptografados em JSON;
+- registro condicional de traces e métricas e validação do protocolo OTLP dos logs.
 
 ### Testes de integração
 
@@ -121,6 +126,7 @@ Como o rate limit permanece em memória durante a vida da `ApiFactory`, evite co
 | Autenticação | Login, cookies, refresh, logout, recuperação de senha, sanitização dos logs do Serilog, revogação, limite de sessões e rate limit |
 | Arquivos | Validação do conteúdo, criptografia em repouso, leitura, adulteração e path traversal |
 | Auditoria | Sanitização isolada e persistência de logs sem dados sensíveis |
+| Observabilidade | Ativação condicional de traces, métricas e logs OTLP e rejeição de protocolo inválido |
 
 ## VS Code
 

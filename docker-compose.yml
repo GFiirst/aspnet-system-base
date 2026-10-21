@@ -33,6 +33,13 @@ services:
       - APPLY_MIGRATIONS_ON_STARTUP=${APPLY_MIGRATIONS_ON_STARTUP:-true}
       - FRONTEND_URL=${FRONTEND_URL}
 
+      # OpenTelemetry
+      - OpenTelemetry__Enabled=${OTEL_ENABLED:-false}
+      - OpenTelemetry__ServiceName=${OTEL_SERVICE_NAME:-aspnet-system-base}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
+      - OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS:-}
+
       # Email
       - MAIL_USER=${MAIL_USER}
       - MAIL_PASS=${MAIL_PASS}

@@ -65,6 +65,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Jwt:AccessExpirationMinutes"] = "15",
                 ["Jwt:ResetPasswordExpirationMinutes"] = "15",
                 ["Jwt:RefreshExpirationDays"] = "30",
+                ["OpenTelemetry:Enabled"] = "false",
                 ["CookieSettings:Secure"] = "false",
                 ["Cors:AllowedOrigins"] = "http://localhost",
                 ["FILE_PATH"] = UploadPath,

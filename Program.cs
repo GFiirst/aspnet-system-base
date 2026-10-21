@@ -16,22 +16,30 @@ builder.Configuration.AddEnvironmentVariables();
 
 const string outputTemplate =
     "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] "
-    + "{SourceContext} {Message:lj}{NewLine}{Exception}";
+    + "[{TraceId}/{SpanId}] {SourceContext} {Message:lj}{NewLine}{Exception}";
 var logPath = builder.Configuration["LOG_PATH"] ?? "logs";
 
-Log.Logger = new LoggerConfiguration()
+var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .MinimumLevel.Information()
     .WriteTo.File($"{logPath}/log-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 15, outputTemplate: outputTemplate)
     .WriteTo.Console(outputTemplate: outputTemplate)
-    .Enrich.FromLogContext()
-    .CreateLogger();
+    .Enrich.FromLogContext();
+
+loggerConfiguration.WriteToApplicationOpenTelemetry(
+    builder.Configuration,
+    builder.Environment);
+
+Log.Logger = loggerConfiguration.CreateLogger();
 
 builder.Host.UseSerilog();
 
 builder.Services.AddApiServices(builder.Configuration);
+builder.Services.AddApplicationOpenTelemetry(
+    builder.Configuration,
+    builder.Environment);
 var knownProxyAddresses = builder.Configuration["ForwardedHeaders:KnownProxies"]?
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     ?? [];

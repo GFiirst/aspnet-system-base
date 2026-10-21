@@ -41,6 +41,13 @@ FRONTEND_URL=http://localhost:3000
 APPLY_MIGRATIONS_ON_STARTUP=true
 FORWARDED_HEADERS_KNOWN_PROXIES=172.18.0.1
 
+# OpenTelemetry opcional
+OTEL_ENABLED=false
+OTEL_SERVICE_NAME=aspnet-system-base
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+OTEL_EXPORTER_OTLP_HEADERS=
+
 # E-mail
 MAIL_USER=
 MAIL_PASS=
@@ -63,6 +70,8 @@ openssl rand -base64 32
 ```
 
 As chaves JWT, a chave de dados e as credenciais não devem ser versionadas. Alterar `FileEncryption__Kek` sem recriptografar os arquivos torna o conteúdo existente ilegível.
+
+`OTEL_ENABLED=true` requer um collector ou backend OTLP acessível pelo container. O Compose apenas configura a exportação e não inicia um collector automaticamente.
 
 No container, a conexão com o banco é montada automaticamente pelo Compose usando o hostname `postgres`; a variável `ConnectionStrings__DefaultConnection` do `.env` é usada apenas na execução local fora do Compose.
 

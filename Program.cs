@@ -14,10 +14,9 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
 builder.Configuration.AddEnvironmentVariables();
 
-var isDevelopment = builder.Environment.IsDevelopment();
-var outputTemplate = isDevelopment
-    ? "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}"
-    : "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}";
+const string outputTemplate =
+    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] "
+    + "{SourceContext} {Message:lj}{NewLine}{Exception}";
 var logPath = builder.Configuration["LOG_PATH"] ?? "logs";
 
 Log.Logger = new LoggerConfiguration()

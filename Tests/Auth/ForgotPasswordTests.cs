@@ -13,13 +13,22 @@ public sealed class ForgotPasswordTests : IntegrationTestBase
     [Fact]
     public async Task Forgot_password_nao_deve_revelar_que_email_nao_existe()
     {
+        const string unknownEmail = "inexistente@system-base.test";
+
         var response = await Client.PostAsJsonAsync(
             "/auth/forgot-password",
-            new ForgotPasswordDto { Email = "inexistente@system-base.test" });
+            new ForgotPasswordDto { Email = unknownEmail });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains(
             "Se existir uma conta vinculada",
             await response.Content.ReadAsStringAsync());
+
+        var logs = string.Join(Environment.NewLine, Factory.AuthLogger.Messages);
+        Assert.Contains("Forgot password request started", logs);
+        Assert.DoesNotContain(
+            unknownEmail,
+            logs,
+            StringComparison.OrdinalIgnoreCase);
     }
 }

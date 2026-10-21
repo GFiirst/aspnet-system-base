@@ -307,7 +307,7 @@ public class AuthService : IAuthService
 
     public async Task ForgotPasswordAsync(ForgotPasswordDto dto)
     {
-        _logger.LogInformation("Forgot password request started for email: {Email}", dto.Email);
+        _logger.LogInformation("Forgot password request started");
 
         var normalizedEmail = dto.Email.ToLowerInvariant();
         var emailHash = _encryptionService.ComputeHash(normalizedEmail);
@@ -317,7 +317,8 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger.LogInformation("User not found for email: {Email}", dto.Email);
+            _logger.LogInformation(
+                "Forgot password request finished for an unknown account");
             return;
         }
 
@@ -326,9 +327,11 @@ public class AuthService : IAuthService
         var resetLink = $"{_emailSettings.FrontendUrl}/reset-password?token={token}";
 
         var decryptedEmail = _encryptionService.Decrypt(user.EmailEncrypted);
-        await SendPasswordResetEmailAsync(decryptedEmail, resetLink);
+        await SendPasswordResetEmailAsync(decryptedEmail, resetLink, user.Id);
 
-        _logger.LogInformation("Password reset email sent for email: {Email}", dto.Email);
+        _logger.LogInformation(
+            "Forgot password request finished. UserId: {UserId}",
+            user.Id);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordDto dto)
@@ -496,7 +499,10 @@ public class AuthService : IAuthService
         }
     }
 
-    private async Task SendPasswordResetEmailAsync(string email, string resetLink)
+    private async Task SendPasswordResetEmailAsync(
+        string email,
+        string resetLink,
+        Guid userId)
     {
         try
         {
@@ -510,23 +516,26 @@ public class AuthService : IAuthService
             message.Body = new TextPart("html") { Text = body };
 
             using var client = new SmtpClient();
-            try
-            {
-                await client.ConnectAsync("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(_emailSettings.MailUser, _emailSettings.MailPass);
-                await client.SendAsync(message);
-                await client.DisconnectAsync(true);
-                _logger.LogInformation("Email sent successfully to: {Email}", email);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending email to: {Email}", email);
-                throw;
-            }
+            await client.ConnectAsync(
+                "smtp.gmail.com",
+                587,
+                MailKit.Security.SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(
+                _emailSettings.MailUser,
+                _emailSettings.MailPass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation(
+                "Password reset email sent. UserId: {UserId}",
+                userId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error preparing email for: {Email}", email);
+            _logger.LogError(
+                ex,
+                "Error processing password reset email. UserId: {UserId}",
+                userId);
             throw;
         }
     }

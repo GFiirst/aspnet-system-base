@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Respawn;
 using Respawn.Graph;
@@ -37,6 +39,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     private Respawner? _respawner;
 
+    public InMemoryLogger<AuthService> AuthLogger { get; } = new();
+
     public string UploadPath => Path.Combine(_temporaryPath, "uploads");
 
     public string LogPath => Path.Combine(_temporaryPath, "logs");
@@ -71,10 +75,17 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
             configuration.AddInMemoryCollection(testSettings);
         });
+
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<ILogger<AuthService>>(AuthLogger);
+        });
     }
 
     public async Task ResetDatabaseAsync()
     {
+        AuthLogger.Clear();
+
         await using var connection = new NpgsqlConnection(
             _postgres.GetConnectionString());
         await connection.OpenAsync();

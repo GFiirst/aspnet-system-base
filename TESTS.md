@@ -118,7 +118,7 @@ Como o rate limit permanece em memória durante a vida da `ApiFactory`, evite co
 | Área | O que é verificado |
 |---|---|
 | Health | Inicialização e resposta do health check |
-| Autenticação | Login, cookies, refresh, logout, recuperação de senha, revogação, limite de sessões e rate limit |
+| Autenticação | Login, cookies, refresh, logout, recuperação de senha, sanitização dos logs do Serilog, revogação, limite de sessões e rate limit |
 | Arquivos | Validação do conteúdo, criptografia em repouso, leitura, adulteração e path traversal |
 | Auditoria | Sanitização isolada e persistência de logs sem dados sensíveis |
 

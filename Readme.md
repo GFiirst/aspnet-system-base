@@ -410,7 +410,9 @@ docs/
 
 ## Logs
 
-O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com retenção de 15 arquivos diários. O template inclui exceções em desenvolvimento.
+O Serilog escreve no console e em `logs/log-AAAA-MM-DD.txt` (ou `LOG_PATH`), com retenção de 15 arquivos diários. O template inclui data, hora, fuso e stack trace das exceções também em produção para diagnóstico interno.
+
+Dados pessoais e segredos não devem ser incluídos nos eventos. Os fluxos de autenticação registram apenas identificadores internos, como `UserId`, e nunca o e-mail informado, tokens ou senhas. Novos logs devem seguir o mesmo padrão.
 
 ## Evoluindo a base
 

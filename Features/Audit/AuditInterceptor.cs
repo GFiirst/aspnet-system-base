@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Text.Json;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using YourProject.Utils;
 
 public class AuditInterceptor : SaveChangesInterceptor
 {
@@ -51,7 +52,8 @@ public class AuditInterceptor : SaveChangesInterceptor
         {
             userId = httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
                 ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+            ipAddress = ClientIpAddressHelper.ToNormalizedString(
+                httpContext.Connection.RemoteIpAddress);
         }
 
         var entries = context.ChangeTracker.Entries()

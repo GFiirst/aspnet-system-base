@@ -147,7 +147,8 @@ public class AuthService : IAuthService
         var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwt.RefreshExpirationDays);
 
         var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
-        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ipAddress = ClientIpAddressHelper.ToNormalizedString(
+            httpContext.Connection.RemoteIpAddress) ?? "unknown";
 
         var refreshEntity = new RefreshToken
         {

@@ -43,6 +43,9 @@ builder.Services.AddApplicationOpenTelemetry(
 var knownProxyAddresses = builder.Configuration["ForwardedHeaders:KnownProxies"]?
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     ?? [];
+var knownProxyNetworks = builder.Configuration["ForwardedHeaders:KnownNetworks"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? [];
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -64,6 +67,26 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         if (proxyAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {
             options.KnownProxies.Add(proxyAddress.MapToIPv6());
+        }
+    }
+
+    foreach (var network in knownProxyNetworks)
+    {
+        if (!System.Net.IPNetwork.TryParse(network, out var proxyNetwork))
+        {
+            throw new InvalidOperationException(
+                $"Rede inválida em ForwardedHeaders:KnownNetworks: '{network}'. " +
+                "Use a notação CIDR, por exemplo 172.18.0.0/16.");
+        }
+
+        options.KnownIPNetworks.Add(proxyNetwork);
+
+        if (proxyNetwork.BaseAddress.AddressFamily ==
+            System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            options.KnownIPNetworks.Add(new System.Net.IPNetwork(
+                proxyNetwork.BaseAddress.MapToIPv6(),
+                proxyNetwork.PrefixLength + 96));
         }
     }
 });

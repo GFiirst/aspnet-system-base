@@ -40,6 +40,7 @@ Cors__AllowedOrigins=http://localhost:3000,http://localhost:5173
 FRONTEND_URL=http://localhost:3000
 APPLY_MIGRATIONS_ON_STARTUP=true
 FORWARDED_HEADERS_KNOWN_PROXIES=172.18.0.1
+FORWARDED_HEADERS_KNOWN_NETWORKS=172.18.0.0/16
 
 # OpenTelemetry opcional
 OTEL_ENABLED=false
@@ -185,6 +186,6 @@ Pare os containers e remova explicitamente o diretório definido em `HOST_POSTGR
 - Use um gerenciador de secrets em vez de armazenar credenciais no `.env`.
 - Fixe versões das imagens e mantenha .NET/PostgreSQL atualizados.
 - Configure backup do diretório de dados do PostgreSQL.
-- Use proxy reverso com HTTPS e configure `ForwardedHeaders__KnownProxies` para o endereço real do proxy.
+- Use proxy reverso com HTTPS e configure `ForwardedHeaders__KnownProxies` para o endereço real do proxy ou `ForwardedHeaders__KnownNetworks` para sua sub-rede em CIDR. Não confie em `0.0.0.0/0`.
 - Defina limites de CPU/memória, monitoramento e alertas.
 - Avalie aplicar migrations em uma etapa controlada do deploy em vez do startup.

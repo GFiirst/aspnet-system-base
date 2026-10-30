@@ -116,8 +116,7 @@ jobs:
             set -e
 
             if [ -f "${{ env.DEPLOY_DIR }}/docker-compose.yml" ]; then
-              cd "${{ env.DEPLOY_DIR }}"
-              docker compose down
+              echo "Instalação Compose existente detectada; preservando containers e redes"
             else
               docker stop aspnet-system-base system-base-postgres 2>/dev/null || true
               docker rm aspnet-system-base system-base-postgres 2>/dev/null || true
@@ -155,6 +154,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           FORWARDED_HEADERS_KNOWN_PROXIES: ${{ secrets.FORWARDED_HEADERS_KNOWN_PROXIES }}
+          FORWARDED_HEADERS_KNOWN_NETWORKS: ${{ secrets.FORWARDED_HEADERS_KNOWN_NETWORKS }}
           JWT_ACCESS_KEY: ${{ secrets.JWT_ACCESS_KEY }}
           JWT_REFRESH_KEY: ${{ secrets.JWT_REFRESH_KEY }}
           JWT_RESET_PASSWORD_KEY: ${{ secrets.JWT_RESET_PASSWORD_KEY }}
@@ -209,6 +209,7 @@ jobs:
             write_env DB_USER "$DB_USER"
             write_env DB_PASSWORD "$DB_PASSWORD"
             write_env FORWARDED_HEADERS_KNOWN_PROXIES "$FORWARDED_HEADERS_KNOWN_PROXIES"
+            write_env FORWARDED_HEADERS_KNOWN_NETWORKS "$FORWARDED_HEADERS_KNOWN_NETWORKS"
             write_env Jwt__AccessKey "$JWT_ACCESS_KEY"
             write_env Jwt__RefreshKey "$JWT_REFRESH_KEY"
             write_env Jwt__ResetPasswordKey "$JWT_RESET_PASSWORD_KEY"

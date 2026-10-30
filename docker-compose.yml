@@ -12,6 +12,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000
       - ForwardedHeaders__KnownProxies=${FORWARDED_HEADERS_KNOWN_PROXIES}
+      - ForwardedHeaders__KnownNetworks=${FORWARDED_HEADERS_KNOWN_NETWORKS}
 
       # Banco de dados
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}

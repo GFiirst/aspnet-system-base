@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using YourProject.Utils;
 
 public static class ServiceCollectionExtensions
 {
@@ -278,14 +279,8 @@ public static class ServiceCollectionExtensions
 
     private static string GetRateLimitPartitionKey(HttpContext httpContext)
     {
-        var ipAddress = httpContext.Connection.RemoteIpAddress;
-
-        if (ipAddress?.IsIPv4MappedToIPv6 == true)
-        {
-            ipAddress = ipAddress.MapToIPv4();
-        }
-
-        var clientIp = ipAddress?.ToString() ?? "unknown";
+        var clientIp = ClientIpAddressHelper.ToNormalizedString(
+            httpContext.Connection.RemoteIpAddress) ?? "unknown";
         var method = httpContext.Request.Method;
         var path = httpContext.Request.Path.Value?.ToLowerInvariant() ?? "/";
 

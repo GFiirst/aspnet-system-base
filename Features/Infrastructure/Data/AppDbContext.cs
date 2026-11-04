@@ -59,6 +59,15 @@ public class AppDbContext : DbContext
             typeof(AppDbContext).Assembly
         );
 
+        var unaccentedILikeMethod = typeof(QueryFilterHelper).GetMethod(
+            nameof(QueryFilterHelper.UnaccentedILike),
+            [typeof(string), typeof(string), typeof(string)])
+            ?? throw new InvalidOperationException(
+                "Função de pesquisa sem acentuação não encontrada.");
+
+        modelBuilder.HasDbFunction(unaccentedILikeMethod)
+            .HasName("unaccented_ilike");
+
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {

@@ -45,6 +45,9 @@ jobs:
           --configuration Release
           --no-restore
 
+      - name: Preparar PostgreSQL dos testes
+        run: docker pull postgres:18
+
       - name: Executar testes
         run: >
           dotnet test Tests/AspnetSystemBase.Tests.csproj

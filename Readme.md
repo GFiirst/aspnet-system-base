@@ -20,6 +20,7 @@ API base em ASP.NET Core 10 para projetos que precisam de cadastro, autenticaç�
 - Tratamento global de erros, CORS, Serilog, Swagger e health check.
 - Observabilidade opcional com traces, métricas e logs estruturados exportados por OTLP.
 - Serviços reutilizáveis de upload e validação de arquivos, CPF e telefone. A validação confere tamanho, extensão, MIME e assinatura/estrutura real do conteúdo antes do armazenamento.
+- Infraestrutura de paginação e pesquisa textual parcial sem distinção de maiúsculas, minúsculas ou acentuação.
 - Suíte de integração para autenticação e health check com banco PostgreSQL descartável.
 
 ## Tecnologias
@@ -117,6 +118,23 @@ O banco precisa estar com as migrations aplicadas antes do primeiro `dotnet run`
 
 Os seeders de roles, permissões e admin sempre rodam no startup e são idempotentes.
 
+### Paginação e pesquisa textual
+
+Use `PagedSearchRequestDto` para receber `page`, `pageSize` e `search`. `QueryFilterHelper` normaliza a paginação, limita o termo a 100 caracteres, escapa `%`, `_` e `\` e oferece comparação parcial sem acentuação. Assim, por exemplo, `usuario` encontra `Usuário`:
+
+```csharp
+var pattern = QueryFilterHelper.CreateContainsPattern(filter.Search);
+if (pattern is not null)
+{
+    query = query.Where(item => QueryFilterHelper.UnaccentedILike(
+        item.Name,
+        pattern,
+        QueryFilterHelper.LikeEscapeCharacter));
+}
+```
+
+A função depende da extensão `unaccent` criada pela migration do projeto.
+
 ### Migrations
 
 Para criar uma migration mantendo-a no diretório usado pelo projeto:
@@ -183,7 +201,7 @@ O container da API depende do health check do PostgreSQL e possui seu próprio c
 
 ## Testes automatizados
 
-A suíte possui 46 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia, segurança de arquivos, sanitização da auditoria e configuração do OpenTelemetry.
+A suíte possui 53 casos que cobrem health check, login, cookies, validação da sessão, rate limit, refresh token, logout, limite de sessões, redefinição de senha, criptografia, segurança de arquivos, pesquisa sem acentuação, sanitização da auditoria e configuração do OpenTelemetry.
 
 ```bash
 dotnet test Tests/AspnetSystemBase.Tests.csproj
